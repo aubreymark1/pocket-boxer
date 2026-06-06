@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
@@ -143,5 +143,41 @@
     </div>
 
     <script type="module" src="./src/app.js"></script>
+    <script>
+      // UI Animation Patch
+      const observer = new MutationObserver((mutations) => {
+        mutations.forEach((mutation) => {
+          if (mutation.type === 'childList' || mutation.type === 'characterData') {
+            const target = mutation.target.nodeType === 3 ? mutation.target.parentElement : mutation.target;
+            
+            if (target.id === 'result-score' && target.textContent !== '--') {
+              target.classList.remove('pop-anim');
+              void target.offsetWidth;
+              target.classList.add('pop-anim');
+              
+              const resultPanel = document.querySelector('.panel-result');
+              resultPanel.classList.remove('fade-in-anim');
+              void resultPanel.offsetWidth;
+              resultPanel.classList.add('fade-in-anim');
+            }
+            
+            if (target.id === 'charge-value') {
+              target.classList.remove('scale-anim');
+              void target.offsetWidth;
+              target.classList.add('scale-anim');
+            }
+            
+            if (target.id === 'status-chip') {
+              if (target.textContent === '测试中') {
+                document.body.classList.add('is-punching');
+              } else {
+                document.body.classList.remove('is-punching');
+              }
+            }
+          }
+        });
+      });
+      observer.observe(document.querySelector('.dashboard'), { childList: true, subtree: true, characterData: true });
+    </script>
   </body>
 </html>
