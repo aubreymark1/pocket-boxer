@@ -12,76 +12,96 @@
         
         <!-- HOME SCREEN -->
         <section id="screen-home" class="screen active">
-          <div class="game-logo">
-            <p class="eyebrow" style="color: var(--accent-alt); margin-bottom: 8px;">STAGE 3</p>
-            <h1>POCKET<br>BOXER</h1>
+          <div class="game-logo" style="margin-bottom: 20px;">
+            <h1 style="font-size: 48px; margin: 0; line-height: 1;">口袋拳击手</h1>
+            <p style="color: var(--muted); margin: 12px 0 0; font-size: 16px; font-weight: bold; letter-spacing: 1px;">
+              握紧手机，挥出你的重拳
+            </p>
           </div>
-          <p style="color: var(--muted); margin: 24px 0 48px; font-size: 16px; font-weight: bold; text-transform: uppercase;">
-            Ready to fight?
-          </p>
-          <button id="btn-start" class="accent-button" style="font-size: 28px; padding: 20px 48px; width: 100%;">START</button>
+          
+          <div class="punching-bag-container">
+            <div class="punching-bag" id="bag-home"></div>
+          </div>
+
+          <div style="margin-top: auto; width: 100%;">
+            <button id="btn-start" class="accent-button" style="font-size: 28px; padding: 16px; width: 100%; margin-bottom: 12px;">开始游戏</button>
+            <p style="color: var(--muted); font-size: 14px; margin: 0;">握稳手机，向前挥拳即可击打</p>
+          </div>
         </section>
         
         <!-- SAFETY SCREEN -->
         <section id="screen-safety" class="screen">
-          <h2 style="color: var(--accent-warn); font-size: 36px; margin-bottom: 24px;">⚠️ WARNING</h2>
-          <div class="info-row" style="margin-bottom: 40px; text-align: left;">
-            <p style="color: #fff; margin: 0; line-height: 1.6; font-size: 16px;">
+          <h2 style="color: var(--accent-warn); font-size: 32px; margin-bottom: 24px;">⚠️ 安全提示</h2>
+          <div class="info-row" style="margin-bottom: 40px; text-align: left; padding: 24px;">
+            <p style="color: #fff; margin: 0; line-height: 1.8; font-size: 16px;">
               请确保周围环境安全，<strong style="color: var(--accent-warn);">紧紧握住手机</strong>。<br><br>
-              避免挥拳时手机飞出伤人或损坏设备。本游戏不对任何硬件损坏负责。
+              避免挥拳时手机脱手伤人或损坏设备。
             </p>
           </div>
-          <button id="btn-safety-ok" class="primary-button" style="width: 100%;">我已抓紧，继续</button>
+          <button id="btn-safety-ok" class="primary-button" style="width: 100%; font-size: 24px; padding: 16px;">我已抓紧，继续</button>
         </section>
 
         <!-- CALIBRATING SCREEN -->
         <section id="screen-calibrating" class="screen">
-          <h2 class="pulse-text" style="color: var(--accent-alt); font-size: 32px; margin-bottom: 24px;">CALIBRATING</h2>
-          <div class="info-row">
-            <p style="color: #fff; margin: 0; font-size: 18px; font-weight: bold;">请保持手机静止...</p>
+          <div class="punching-bag-container" style="opacity: 0.5;">
+            <div class="punching-bag"></div>
           </div>
+          <h2 class="pulse-text" style="color: var(--accent-alt); font-size: 28px; margin-top: 32px;">正在校准...</h2>
+          <p style="color: #fff; margin: 12px 0 0; font-size: 16px;">请保持手机静止</p>
         </section>
 
         <!-- COUNTDOWN SCREEN -->
         <section id="screen-countdown" class="screen">
-          <h2 style="color: #fff; font-size: 32px; margin-bottom: 0;">GET READY</h2>
-          <div id="countdown-display" class="pop-anim" style="font-size: 160px; font-weight: bold; color: var(--accent-good); text-shadow: 8px 8px 0 #000; margin: 20px 0; font-family: var(--font-arcade);">3</div>
+          <div class="punching-bag-container">
+            <div class="punching-bag"></div>
+          </div>
+          <h2 style="color: #fff; font-size: 28px; margin: 24px 0 0; position: absolute; top: 10%;">准备</h2>
+          <div id="countdown-display" class="pop-anim" style="position: absolute; font-size: 180px; font-weight: bold; color: var(--accent-good); text-shadow: 8px 8px 0 #000; font-family: var(--font-arcade); z-index: 10;">3</div>
         </section>
 
         <!-- PUNCH SCREEN -->
         <section id="screen-punch" class="screen">
-          <div id="punch-motion-ui" style="width: 100%;">
-            <h2 class="pulse-text" style="color: var(--accent); font-size: 72px; text-shadow: 6px 6px 0 #000; margin: 0;">PUNCH!</h2>
-            <p style="color: var(--accent-good); margin: 24px 0; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Now!</p>
+          <h2 id="punch-instruction" class="pulse-text" style="color: var(--accent); font-size: 36px; text-shadow: 4px 4px 0 #000; margin: 0 0 24px; position: absolute; top: 10%;">挥动手机，击打沙包！</h2>
+          
+          <div class="punching-bag-container" style="margin-top: 40px; transform: scale(1.2);">
+            <div class="punching-bag" id="bag-punch"></div>
           </div>
-          <div id="punch-fallback-ui" style="display: none; width: 100%;">
-            <h2 style="color: var(--accent-alt); font-size: 32px; margin-bottom: 24px;">CHARGE MODE</h2>
-            <div class="charge-bar" style="height: 48px; border-width: 4px; margin-bottom: 40px;">
+
+          <div id="punch-fallback-ui" style="display: none; width: 100%; position: absolute; bottom: 40px; padding: 0 24px;">
+            <h2 style="color: var(--accent-alt); font-size: 24px; margin-bottom: 16px;">长按蓄力，松手出拳</h2>
+            <div class="charge-bar" style="height: 36px; border-width: 3px; margin-bottom: 24px;">
               <div id="fallback-charge-fill" class="charge-fill"></div>
             </div>
-            <button id="btn-fallback-charge" class="charge-button" style="height: 100px; font-size: 28px;">HOLD TO CHARGE</button>
+            <button id="btn-fallback-charge" class="charge-button" style="height: 80px; font-size: 24px;">按住蓄力</button>
           </div>
         </section>
 
         <!-- RESULT SCREEN -->
         <section id="screen-result" class="screen">
-          <h2 style="font-size: 56px; color: #fff; margin: 0; text-shadow: 4px 4px 0 #000;">K.O.</h2>
-          <p id="res-message" class="result-message" style="margin: 24px 0; width: 100%;"></p>
+          <h2 id="result-title" style="font-size: 48px; color: var(--accent-good); margin: 0; text-shadow: 4px 4px 0 #000; position: absolute; top: 8%; z-index: 10; font-family: var(--font-arcade); font-style: italic;">命中！</h2>
           
-          <div class="result-grid" style="margin-bottom: 40px; width: 100%;">
-            <div class="result-card result-score" style="grid-column: span 2; padding: 32px 16px;">
-              <span class="result-label" style="font-size: 18px;">SCORE</span>
-              <strong id="res-score" style="font-size: 96px; line-height: 1; margin-top: 16px;">--</strong>
+          <div class="punching-bag-container bag-hit" style="margin-top: 40px; transform: scale(1.2);">
+            <div class="punching-bag" id="bag-result"></div>
+          </div>
+          
+          <div id="damage-hud" class="pop-anim" style="position: absolute; top: 40%; color: #fff; text-shadow: 4px 4px 0 #000; font-family: var(--font-arcade); z-index: 20; text-align: center;">
+            <div style="font-size: 24px; color: var(--accent-alt);">伤害值</div>
+            <div id="res-damage" style="font-size: 64px; color: var(--accent);">-1240</div>
+          </div>
+          
+          <div class="result-hud" style="width: 100%; position: absolute; bottom: 120px; padding: 0 24px; display: flex; justify-content: space-between; align-items: center;">
+            <div style="text-align: left;">
+              <div style="font-size: 14px; color: var(--muted); font-weight: bold;">出拳指数</div>
+              <div id="res-score" style="font-size: 48px; color: var(--accent-good); font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">--</div>
             </div>
-            <div class="result-card" style="grid-column: span 2;">
-              <span class="result-label">PEAK MAGNITUDE</span>
-              <strong id="res-peak" style="font-size: 32px;">--</strong>
+            <div style="text-align: right;">
+              <div style="font-size: 14px; color: var(--muted); font-weight: bold;">拳击评级</div>
+              <div id="res-rating" style="font-size: 32px; color: #fff; font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">HEAVY HIT</div>
             </div>
           </div>
           
-          <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
-            <button id="btn-retry" class="accent-button" style="font-size: 24px; padding: 20px;">FIGHT AGAIN</button>
-            <button id="btn-home" class="ghost-button">MAIN MENU</button>
+          <div style="width: 100%; position: absolute; bottom: 24px; padding: 0 24px;">
+            <button id="btn-retry" class="accent-button" style="font-size: 24px; padding: 16px; width: 100%;">再来一拳</button>
           </div>
         </section>
 
@@ -100,6 +120,21 @@
               target.classList.remove('pop-anim');
               void target.offsetWidth;
               target.classList.add('pop-anim');
+              
+              const damageHud = document.getElementById('damage-hud');
+              if (damageHud) {
+                damageHud.classList.remove('pop-anim');
+                void damageHud.offsetWidth;
+                damageHud.classList.add('pop-anim');
+              }
+              
+              const resultBag = document.getElementById('bag-result');
+              if (resultBag) {
+                const bagContainer = resultBag.parentElement;
+                bagContainer.classList.remove('bag-hit');
+                void bagContainer.offsetWidth;
+                bagContainer.classList.add('bag-hit');
+              }
             }
             
             if (target.id === 'countdown-display') {

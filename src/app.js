@@ -23,8 +23,11 @@ const btnRetry = document.getElementById('btn-retry');
 const btnHome = document.getElementById('btn-home');
 
 const resScore = document.getElementById('res-score');
-const resPeak = document.getElementById('res-peak');
-const resMessage = document.getElementById('res-message');
+const resRating = document.getElementById('res-rating');
+const resDamage = document.getElementById('res-damage');
+const resultTitle = document.getElementById('result-title');
+const appContainer = document.getElementById('app-container');
+const bagResult = document.getElementById('bag-result');
 
 // Initialize motion controller
 const motionController = createMotionController({
@@ -106,9 +109,36 @@ function showResult(result) {
   showScreen('result');
   feedbackModule.scorePulse(result.score);
   
+  // Apply Screen Shake
+  appContainer.classList.remove('screen-shake');
+  void appContainer.offsetWidth;
+  appContainer.classList.add('screen-shake');
+  
   resScore.textContent = result.score;
-  resPeak.textContent = result.peakMagnitude !== null ? result.peakMagnitude.toFixed(2) : '--';
-  resMessage.textContent = result.message;
+  
+  // Calculate game-like damage based on score/peak
+  const damage = Math.floor(result.score * 15 + (result.peakMagnitude || 0) * 10);
+  resDamage.textContent = `+${damage}`;
+  
+  // Evaluate Rating
+  let rating = 'MISS';
+  let title = '命中！';
+  if (result.score >= 90) { rating = 'PERFECT HIT'; title = '完美一击！'; }
+  else if (result.score >= 60) { rating = 'HEAVY HIT'; title = '重击！'; }
+  else if (result.score >= 30) { rating = 'GOOD HIT'; title = '命中！'; }
+  else { rating = 'LIGHT HIT'; title = '擦边...'; }
+  
+  resRating.textContent = rating;
+  resultTitle.textContent = title;
+  
+  // Extreme hit colors
+  if (result.score >= 90) {
+    resDamage.style.color = 'var(--accent-good)';
+    resRating.style.color = 'var(--accent-good)';
+  } else {
+    resDamage.style.color = 'var(--accent)';
+    resRating.style.color = '#fff';
+  }
 }
 
 // Event Listeners

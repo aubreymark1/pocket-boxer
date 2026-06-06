@@ -119,7 +119,84 @@ button {
   line-height: 1.6;
 }
 
-/* Keep panels if fallback is needed */
+/* PUNCHING BAG CSS ART */
+.punching-bag-container {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 240px;
+  width: 100%;
+  position: relative;
+  z-index: 1;
+}
+
+.punching-bag {
+  width: 110px;
+  height: 220px;
+  background: linear-gradient(135deg, var(--accent) 0%, #8b0000 100%);
+  border-radius: 20px 20px 55px 55px;
+  box-shadow: inset -12px -12px 24px rgba(0,0,0,0.6), inset 12px 12px 24px rgba(255,255,255,0.2), 8px 8px 0 #000;
+  position: relative;
+  transform-origin: top center;
+  border: 4px solid #000;
+}
+
+.punching-bag::before {
+  content: '';
+  position: absolute;
+  top: -24px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 24px;
+  background: #333;
+  border: 4px solid #000;
+  border-radius: 4px;
+  box-shadow: inset -4px -4px 8px rgba(0,0,0,0.5);
+}
+
+.punching-bag::after {
+  content: '';
+  position: absolute;
+  top: -40px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 6px;
+  height: 16px;
+  background: #777;
+  border: 3px solid #000;
+}
+
+@keyframes bagHit {
+  0% { transform: rotate(0deg); }
+  15% { transform: rotate(-18deg) translateX(-15px); }
+  30% { transform: rotate(12deg) translateX(10px); }
+  50% { transform: rotate(-8deg) translateX(-5px); }
+  70% { transform: rotate(4deg); }
+  100% { transform: rotate(0deg); }
+}
+
+.bag-hit .punching-bag {
+  animation: bagHit 0.6s cubic-bezier(0.36, 0, 0.66, -0.56);
+}
+
+@keyframes screenShake {
+  0% { transform: translate(0, 0); }
+  10% { transform: translate(-10px, -10px); }
+  20% { transform: translate(10px, 10px); }
+  30% { transform: translate(-10px, 10px); }
+  40% { transform: translate(10px, -10px); }
+  50% { transform: translate(-5px, -5px); }
+  60% { transform: translate(5px, 5px); }
+  70% { transform: translate(-5px, 5px); }
+  80% { transform: translate(5px, -5px); }
+  90% { transform: translate(-2px, -2px); }
+  100% { transform: translate(0, 0); }
+}
+
+.screen-shake {
+  animation: screenShake 0.4s ease-out;
+}
 .dashboard {
   display: flex;
   flex-direction: column;
