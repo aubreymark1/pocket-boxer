@@ -86,6 +86,7 @@ function getScreen(state) {
   if (state.result) return 'result';
   if (state.isPunchTestActive) return 'punch';
   if (state.isCalibrating) return 'calibrating';
+  if (state.permissionStatus === 'granted') return 'safety'; // Map to safety to test it
   return 'home';
 }
 
@@ -100,6 +101,21 @@ function renderHome(state) {
   `;
 }
 
+function renderSafety(state) {
+  return `
+    <div class="game-container">
+      <div class="safety-title">安全须知</div>
+      <div class="safety-list">
+        <div class="safety-item"><span>⚠️</span> 握紧手机</div>
+        <div class="safety-item"><span>⚠️</span> 只做短幅度挥拳</div>
+        <div class="safety-item"><span>⚠️</span> 不要砸向人/桌子/墙和其他物体</div>
+        <div class="safety-item"><span>⚠️</span> 周围确认无障碍物</div>
+      </div>
+      <button class="btn-primary" id="btn-safety-confirm">我已了解，开始游戏</button>
+    </div>
+  `;
+}
+
 export function renderUI(state) {
   if (!currentAppShell) return;
 
@@ -109,6 +125,9 @@ export function renderUI(state) {
   switch (screen) {
     case 'home':
       html = renderHome(state);
+      break;
+    case 'safety':
+      html = renderSafety(state);
       break;
     default:
       html = renderHome(state);
@@ -124,6 +143,18 @@ export function renderUI(state) {
       btn.addEventListener('click', () => {
         if (appHandlers.onRequestPermission) {
           appHandlers.onRequestPermission().catch(appHandlers.onActionError);
+        }
+      });
+    }
+  }
+
+  // Bind events for safety
+  if (screen === 'safety') {
+    const btn = document.getElementById('btn-safety-confirm');
+    if (btn) {
+      btn.addEventListener('click', () => {
+        if (appHandlers.onStartCalibration) {
+          appHandlers.onStartCalibration().catch(appHandlers.onActionError);
         }
       });
     }
