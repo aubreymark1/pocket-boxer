@@ -1,0 +1,78 @@
+﻿:root {
+  color-scheme: dark;
+  --bg: #0a0d18;
+  --panel: #12182b;
+  --panel-border: #26304f;
+  --text: #f4f7ff;
+  --muted: #9aa7cf;
+  --accent: #ff4d5a;
+  --accent-alt: #50a7ff;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  font-family: Arial, Helvetica, sans-serif;
+  background: radial-gradient(circle at top, #18213c 0%, var(--bg) 55%);
+  color: var(--text);
+}
+
+.app-shell {
+  max-width: 960px;
+  margin: 0 auto;
+  padding: 48px 20px 64px;
+}
+
+.hero {
+  text-align: center;
+  margin-bottom: 32px;
+}
+
+.eyebrow {
+  margin: 0 0 12px;
+  color: var(--accent-alt);
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: 12px;
+}
+
+h1 {
+  margin: 0;
+  font-size: clamp(40px, 7vw, 72px);
+}
+
+.subtitle {
+  margin: 16px auto 0;
+  max-width: 640px;
+  color: var(--muted);
+  font-size: 18px;
+  line-height: 1.6;
+}
+
+.card-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  gap: 16px;
+}
+
+.card {
+  padding: 20px;
+  border: 1px solid var(--panel-border);
+  border-radius: 16px;
+  background: rgba(18, 24, 43, 0.92);
+  box-shadow: 0 16px 40px rgba(0, 0, 0, 0.2);
+}
+
+.card h2 {
+  margin-top: 0;
+}
+
+.card p {
+  margin-bottom: 0;
+  color: var(--muted);
+  line-height: 1.6;
+}
