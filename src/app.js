@@ -167,19 +167,23 @@ btnRetry.addEventListener('click', () => {
   proceedFromSafety();
 });
 
-btnHome.addEventListener('click', () => {
-  motionController.resetResult();
-  showScreen('home');
-});
+if (btnHome) {
+  btnHome.addEventListener('click', () => {
+    motionController.resetResult();
+    showScreen('home');
+  });
+}
 
 // Setup Fallback Button logic
 let pointerActive = false;
-fallbackBtn.addEventListener('pointerdown', (e) => {
-  e.preventDefault();
-  pointerActive = true;
-  motionController.startCharge();
-  feedbackModule.softPulse();
-});
+if (fallbackBtn) {
+  fallbackBtn.addEventListener('pointerdown', (e) => {
+    e.preventDefault();
+    pointerActive = true;
+    motionController.startCharge();
+    feedbackModule.softPulse();
+  });
+}
 
 const endCharge = (e) => {
   if (!pointerActive) return;
@@ -192,9 +196,11 @@ const endCharge = (e) => {
   }
 };
 
-fallbackBtn.addEventListener('pointerup', endCharge);
-fallbackBtn.addEventListener('pointercancel', endCharge);
-fallbackBtn.addEventListener('pointerleave', endCharge);
+if (fallbackBtn) {
+  fallbackBtn.addEventListener('pointerup', endCharge);
+  fallbackBtn.addEventListener('pointercancel', endCharge);
+  fallbackBtn.addEventListener('pointerleave', endCharge);
+}
 window.addEventListener('pointerup', endCharge);
 
 // Init

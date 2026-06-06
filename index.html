@@ -61,10 +61,12 @@
 
         <!-- PUNCH SCREEN -->
         <section id="screen-punch" class="screen">
-          <h2 id="punch-instruction" class="pulse-text" style="color: var(--accent); font-size: 36px; text-shadow: 4px 4px 0 #000; margin: 0 0 24px; position: absolute; top: 10%;">挥动手机，击打沙包！</h2>
-          
-          <div class="punching-bag-container" style="margin-top: 40px; transform: scale(1.2);">
-            <div class="punching-bag" id="bag-punch"></div>
+          <div id="punch-motion-ui" style="width: 100%;">
+            <h2 id="punch-instruction" class="pulse-text" style="color: var(--accent); font-size: 36px; text-shadow: 4px 4px 0 #000; margin: 0 0 24px; position: absolute; top: 10%;">挥动手机，击打沙包！</h2>
+            
+            <div class="punching-bag-container" style="margin-top: 40px; transform: scale(1.2);">
+              <div class="punching-bag" id="bag-punch"></div>
+            </div>
           </div>
 
           <div id="punch-fallback-ui" style="display: none; width: 100%; position: absolute; bottom: 40px; padding: 0 24px;">
@@ -106,6 +108,7 @@
           <div style="width: 100%; position: absolute; bottom: 24px; padding: 0 24px;">
             <button id="btn-retry" class="accent-button" style="font-size: 24px; padding: 16px; width: 100%;">再来一拳</button>
           </div>
+          <button id="btn-home" type="button" hidden aria-hidden="true" tabindex="-1"></button>
         </section>
 
       </main>
