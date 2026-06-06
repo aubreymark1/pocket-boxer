@@ -146,10 +146,70 @@ function renderCountdown(state) {
 }
 
 function renderPunch(state) {
+  const isFallback = state.mode === 'fallback';
+  
+  if (isFallback) {
+    return `
+      <div class="game-container">
+        <div class="punch-text" style="animation: none;">长按蓄力</div>
+        <div class="desc-text" style="margin-top: 20px; font-size: 18px;">${state.statusMessage || '松手即可出拳！'}</div>
+        <div style="width: 80%; height: 20px; background: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 30px; overflow: hidden;">
+          <div style="width: ${state.fallbackCharge || 0}%; height: 100%; background: linear-gradient(90deg, #50a7ff, #ff4d5a); transition: width 0.1s;"></div>
+        </div>
+        <button class="btn-primary" id="btn-charge" style="margin-top: 30px; user-select: none;">按住蓄力，松手出拳</button>
+      </div>
+    `;
+  }
+  
   return `
     <div class="game-container punching-pulse">
       <div class="punch-text" style="animation: none;">现在挥拳！</div>
       <div class="desc-text" style="margin-top: 20px; font-size: 18px;">${state.statusMessage || '采样中...'}</div>
+    </div>
+  `;
+}
+
+function formatNumber(value) {
+  if (typeof value !== 'number' || Number.isNaN(value)) return '--';
+  return value.toFixed(2);
+}
+
+function getEvaluation(score) {
+  if (score <= 30) return { text: '轻轻一碰', isExtreme: false };
+  if (score <= 60) return { text: '普通直拳', isExtreme: false };
+  if (score <= 90) return { text: '重拳出击', isExtreme: false };
+  if (score <= 100) return { text: '爆裂一击', isExtreme: false };
+  return { text: '极限爆发', isExtreme: true };
+}
+
+function renderResult(state) {
+  const result = state.result || { score: 0, peakMagnitude: 0, peakDelta: 0 };
+  const score = result.score;
+  const evalData = getEvaluation(score);
+  
+  return `
+    <div class="game-container">
+      <div class="result-score-label">Score</div>
+      <div class="result-score-value">${score}</div>
+      
+      <div class="result-details">
+        <div class="result-detail-item">
+          <div class="result-detail-label">Peak</div>
+          <div class="result-detail-value">${formatNumber(result.peakMagnitude)}</div>
+        </div>
+        <div class="result-detail-item">
+          <div class="result-detail-label">Peak Delta</div>
+          <div class="result-detail-value">${formatNumber(result.peakDelta)}</div>
+        </div>
+      </div>
+      
+      <div class="result-eval ${evalData.isExtreme ? 'eval-extreme' : ''}">
+        ${evalData.text}
+      </div>
+      
+      <button class="btn-primary" id="btn-result-retry" style="margin-bottom: 10px;">再来一次</button>
+      <button class="btn-secondary" id="btn-result-home" style="margin-bottom: 10px;">返回首页</button>
+      <button class="btn-secondary" id="btn-result-pvp" style="margin-bottom: 10px;">进入人机对战</button>
     </div>
   `;
 }
@@ -175,6 +235,9 @@ export function renderUI(state) {
       break;
     case 'punch':
       html = renderPunch(state);
+      break;
+    case 'result':
+      html = renderResult(state);
       break;
     default:
       html = renderHome(state);
@@ -203,6 +266,53 @@ export function renderUI(state) {
         if (appHandlers.onStartCalibration) {
           appHandlers.onStartCalibration().catch(appHandlers.onActionError);
         }
+      });
+    }
+  }
+
+  // Bind events for punch (fallback)
+  if (screen === 'punch' && state.mode === 'fallback') {
+    const btnCharge = document.getElementById('btn-charge');
+    if (btnCharge) {
+      let pointerActive = false;
+      const startCharge = (e) => {
+        e.preventDefault();
+        pointerActive = true;
+        if (appHandlers.onChargeStart) appHandlers.onChargeStart();
+      };
+      const endCharge = (e) => {
+        if (!pointerActive) return;
+        pointerActive = false;
+        if (e) e.preventDefault();
+        if (appHandlers.onChargeEnd) appHandlers.onChargeEnd();
+      };
+      
+      btnCharge.addEventListener('pointerdown', startCharge);
+      btnCharge.addEventListener('pointerup', endCharge);
+      btnCharge.addEventListener('pointercancel', endCharge);
+      btnCharge.addEventListener('pointerleave', endCharge);
+      window.addEventListener('pointerup', endCharge);
+    }
+  }
+
+  // Bind events for result
+  if (screen === 'result') {
+    const btnRetry = document.getElementById('btn-result-retry');
+    const btnHome = document.getElementById('btn-result-home');
+    
+    if (btnRetry) {
+      btnRetry.addEventListener('click', () => {
+        if (appHandlers.onResetResult) appHandlers.onResetResult();
+        if (appHandlers.onStartPunchTest) {
+          appHandlers.onStartPunchTest().catch(appHandlers.onActionError);
+        }
+      });
+    }
+    
+    if (btnHome) {
+      btnHome.addEventListener('click', () => {
+        if (appHandlers.onResetResult) appHandlers.onResetResult();
+        // Return home logic would go here if provided by appHandlers
       });
     }
   }
