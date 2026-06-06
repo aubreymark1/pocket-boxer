@@ -145,6 +145,15 @@ function renderCountdown(state) {
   `;
 }
 
+function renderPunch(state) {
+  return `
+    <div class="game-container punching-pulse">
+      <div class="punch-text" style="animation: none;">现在挥拳！</div>
+      <div class="desc-text" style="margin-top: 20px; font-size: 18px;">${state.statusMessage || '采样中...'}</div>
+    </div>
+  `;
+}
+
 export function renderUI(state) {
   if (!currentAppShell) return;
 
@@ -163,6 +172,9 @@ export function renderUI(state) {
       break;
     case 'countdown':
       html = renderCountdown(state);
+      break;
+    case 'punch':
+      html = renderPunch(state);
       break;
     default:
       html = renderHome(state);
