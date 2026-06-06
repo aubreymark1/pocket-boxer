@@ -1,143 +1,78 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pocket Boxer Stage 2</title>
+    <title>Pocket Boxer Stage 3</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="app-shell">
       <header class="hero">
-        <p class="eyebrow">Stage 2 Validation</p>
+        <p class="eyebrow">Stage 3 Flow</p>
         <h1>Pocket Boxer</h1>
         <p class="subtitle">
-          体感拳击验证台。先验证传感器权限、实时加速度、基础挥拳识别和备用蓄力模式，再进入正式玩法开发。
+          出拳测试流程。包含安全提示、校准、倒计时、挥拳及结果反馈。
         </p>
       </header>
 
-      <main class="dashboard">
-        <section class="panel panel-status">
-          <div class="panel-head">
-            <h2>当前状态</h2>
-            <span id="status-chip" class="status-chip">等待开始</span>
-          </div>
-          <div class="status-grid">
-            <div class="info-row">
-              <span>传感器支持</span>
-              <strong id="support-status">检测中</strong>
-            </div>
-            <div class="info-row">
-              <span>权限状态</span>
-              <strong id="permission-status">未请求</strong>
-            </div>
-            <div class="info-row">
-              <span>当前模式</span>
-              <strong id="mode-status">传感器模式</strong>
-            </div>
-            <div class="info-row">
-              <span>监听状态</span>
-              <strong id="listening-status">未监听</strong>
-            </div>
-          </div>
-          <p id="status-message" class="status-message">点击权限按钮开始验证。</p>
+      <main id="app-container">
+        <section id="screen-home" class="screen active">
+          <h2>准备好开始了吗？</h2>
+          <p style="color: var(--muted); margin: 16px 0 24px;">体验完整的出拳测试流程</p>
+          <button id="btn-start" class="primary-button">开始测试</button>
         </section>
-
-        <section class="panel panel-controls">
-          <div class="panel-head">
-            <h2>验证控制台</h2>
-            <span class="panel-note">先校准，再短幅度挥拳</span>
-          </div>
-          <div class="button-grid">
-            <button id="request-permission-btn" class="primary-button">请求动作权限</button>
-            <button id="start-calibration-btn" class="secondary-button">开始校准</button>
-            <button id="start-punch-test-btn" class="accent-button">开始挥拳测试</button>
-            <button id="use-fallback-btn" class="secondary-button">切换备用蓄力</button>
-            <button id="reset-result-btn" class="ghost-button">重置结果</button>
-          </div>
-          <div class="helper-list">
-            <p>1. 手机上先点请求动作权限。</p>
-            <p>2. 保持手机静止后点开始校准。</p>
-            <p>3. 点击开始挥拳测试，在窗口期内短幅度挥拳。</p>
-            <p>4. 如果权限失败或设备不支持，改用下方备用蓄力模式。</p>
-          </div>
-        </section>
-
-        <section class="panel panel-metrics">
-          <div class="panel-head">
-            <h2>实时传感器数据</h2>
-            <span class="panel-note">用于现场调阈值</span>
-          </div>
-          <div class="metric-grid">
-            <div class="metric-card">
-              <span class="metric-label">X</span>
-              <strong id="metric-x">0.00</strong>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Y</span>
-              <strong id="metric-y">0.00</strong>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Z</span>
-              <strong id="metric-z">0.00</strong>
-            </div>
-            <div class="metric-card metric-hot">
-              <span class="metric-label">Magnitude</span>
-              <strong id="metric-magnitude">0.00</strong>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Baseline</span>
-              <strong id="metric-baseline">0.00</strong>
-            </div>
-            <div class="metric-card">
-              <span class="metric-label">Peak</span>
-              <strong id="metric-peak">0.00</strong>
-            </div>
-          </div>
-        </section>
-
-        <section class="panel panel-fallback">
-          <div class="panel-head">
-            <h2>备用蓄力模式</h2>
-            <span id="fallback-mode-badge" class="mode-badge">未启用</span>
-          </div>
-          <p class="fallback-copy">
-            传感器不可用时，长按下方按钮蓄力，松手即可生成 0 到 100 的验证分数。
+        
+        <section id="screen-safety" class="screen">
+          <h2>安全提示</h2>
+          <p style="color: var(--accent-warn); margin: 16px 0 24px; max-width: 400px; line-height: 1.6;">
+            请确保周围环境安全，握紧手机，避免挥拳时手机飞出伤人或损坏设备。
           </p>
-          <div class="charge-bar">
-            <div id="charge-fill" class="charge-fill"></div>
-          </div>
-          <div class="charge-meta">
-            <span>当前蓄力</span>
-            <strong id="charge-value">0</strong>
-          </div>
-          <button id="charge-button" class="charge-button" disabled>按住蓄力，松手出拳</button>
+          <button id="btn-safety-ok" class="accent-button">我已了解，继续</button>
         </section>
 
-        <section class="panel panel-result">
-          <div class="panel-head">
-            <h2>结果输出</h2>
-            <span class="panel-note">后续人机对战直接消费这块结果</span>
+        <section id="screen-calibrating" class="screen">
+          <h2>正在校准</h2>
+          <p style="color: var(--muted); margin: 16px 0;">请保持手机静止...</p>
+        </section>
+
+        <section id="screen-countdown" class="screen">
+          <h2>准备</h2>
+          <div id="countdown-display" style="font-size: 80px; font-weight: bold; color: var(--accent); margin: 20px 0;">3</div>
+        </section>
+
+        <section id="screen-punch" class="screen">
+          <div id="punch-motion-ui">
+            <h2 style="color: var(--accent-good);">挥拳吧！</h2>
+            <p style="color: var(--muted); margin: 16px 0;">请在此时完成一次短幅度挥拳</p>
           </div>
-          <div class="result-grid">
-            <div class="result-card">
-              <span class="result-label">结果来源</span>
-              <strong id="result-source">暂无</strong>
+          <div id="punch-fallback-ui" style="display: none; width: 100%; max-width: 400px;">
+            <h2>备用蓄力模式</h2>
+            <p style="color: var(--muted); margin: 16px 0;">长按下方按钮蓄力，松手出拳</p>
+            <div class="charge-bar">
+              <div id="fallback-charge-fill" class="charge-fill"></div>
             </div>
+            <button id="btn-fallback-charge" class="charge-button" style="margin-top: 20px;">按住蓄力</button>
+          </div>
+        </section>
+
+        <section id="screen-result" class="screen">
+          <h2>测试结果</h2>
+          <p id="res-message" style="color: var(--muted); margin: 8px 0 24px;"></p>
+          <div class="result-grid" style="margin-bottom: 32px; width: 100%; max-width: 400px;">
             <div class="result-card result-score">
-              <span class="result-label">本次分数</span>
-              <strong id="result-score">--</strong>
+              <span class="result-label">分数</span>
+              <strong id="res-score">--</strong>
             </div>
             <div class="result-card">
               <span class="result-label">峰值</span>
-              <strong id="result-peak">--</strong>
-            </div>
-            <div class="result-card">
-              <span class="result-label">峰值差</span>
-              <strong id="result-delta">--</strong>
+              <strong id="res-peak">--</strong>
             </div>
           </div>
-          <p id="result-message" class="result-message">还没有结果，先开始一次验证。</p>
+          <div style="display: flex; gap: 16px; justify-content: center;">
+            <button id="btn-retry" class="accent-button">再来一次</button>
+            <button id="btn-home" class="secondary-button">返回首页</button>
+          </div>
         </section>
       </main>
     </div>
