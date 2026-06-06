@@ -2,78 +2,89 @@
 <html lang="zh-CN">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Pocket Boxer Stage 3</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+    <title>Pocket Boxer</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
   <body>
     <div class="app-shell">
-      <header class="hero">
-        <p class="eyebrow">Stage 3 Flow</p>
-        <h1>Pocket Boxer</h1>
-        <p class="subtitle">
-          出拳测试流程。包含安全提示、校准、倒计时、挥拳及结果反馈。
-        </p>
-      </header>
-
       <main id="app-container">
+        
+        <!-- HOME SCREEN -->
         <section id="screen-home" class="screen active">
-          <h2>准备好开始了吗？</h2>
-          <p style="color: var(--muted); margin: 16px 0 24px;">体验完整的出拳测试流程</p>
-          <button id="btn-start" class="primary-button">开始测试</button>
+          <div class="game-logo">
+            <p class="eyebrow" style="color: var(--accent-alt); margin-bottom: 8px;">STAGE 3</p>
+            <h1>POCKET<br>BOXER</h1>
+          </div>
+          <p style="color: var(--muted); margin: 24px 0 48px; font-size: 16px; font-weight: bold; text-transform: uppercase;">
+            Ready to fight?
+          </p>
+          <button id="btn-start" class="accent-button" style="font-size: 28px; padding: 20px 48px; width: 100%;">START</button>
         </section>
         
+        <!-- SAFETY SCREEN -->
         <section id="screen-safety" class="screen">
-          <h2>安全提示</h2>
-          <p style="color: var(--accent-warn); margin: 16px 0 24px; max-width: 400px; line-height: 1.6;">
-            请确保周围环境安全，握紧手机，避免挥拳时手机飞出伤人或损坏设备。
-          </p>
-          <button id="btn-safety-ok" class="accent-button">我已了解，继续</button>
-        </section>
-
-        <section id="screen-calibrating" class="screen">
-          <h2>正在校准</h2>
-          <p style="color: var(--muted); margin: 16px 0;">请保持手机静止...</p>
-        </section>
-
-        <section id="screen-countdown" class="screen">
-          <h2>准备</h2>
-          <div id="countdown-display" style="font-size: 80px; font-weight: bold; color: var(--accent); margin: 20px 0;">3</div>
-        </section>
-
-        <section id="screen-punch" class="screen">
-          <div id="punch-motion-ui">
-            <h2 style="color: var(--accent-good);">挥拳吧！</h2>
-            <p style="color: var(--muted); margin: 16px 0;">请在此时完成一次短幅度挥拳</p>
+          <h2 style="color: var(--accent-warn); font-size: 36px; margin-bottom: 24px;">⚠️ WARNING</h2>
+          <div class="info-row" style="margin-bottom: 40px; text-align: left;">
+            <p style="color: #fff; margin: 0; line-height: 1.6; font-size: 16px;">
+              请确保周围环境安全，<strong style="color: var(--accent-warn);">紧紧握住手机</strong>。<br><br>
+              避免挥拳时手机飞出伤人或损坏设备。本游戏不对任何硬件损坏负责。
+            </p>
           </div>
-          <div id="punch-fallback-ui" style="display: none; width: 100%; max-width: 400px;">
-            <h2>备用蓄力模式</h2>
-            <p style="color: var(--muted); margin: 16px 0;">长按下方按钮蓄力，松手出拳</p>
-            <div class="charge-bar">
+          <button id="btn-safety-ok" class="primary-button" style="width: 100%;">我已抓紧，继续</button>
+        </section>
+
+        <!-- CALIBRATING SCREEN -->
+        <section id="screen-calibrating" class="screen">
+          <h2 class="pulse-text" style="color: var(--accent-alt); font-size: 32px; margin-bottom: 24px;">CALIBRATING</h2>
+          <div class="info-row">
+            <p style="color: #fff; margin: 0; font-size: 18px; font-weight: bold;">请保持手机静止...</p>
+          </div>
+        </section>
+
+        <!-- COUNTDOWN SCREEN -->
+        <section id="screen-countdown" class="screen">
+          <h2 style="color: #fff; font-size: 32px; margin-bottom: 0;">GET READY</h2>
+          <div id="countdown-display" class="pop-anim" style="font-size: 160px; font-weight: bold; color: var(--accent-good); text-shadow: 8px 8px 0 #000; margin: 20px 0; font-family: var(--font-arcade);">3</div>
+        </section>
+
+        <!-- PUNCH SCREEN -->
+        <section id="screen-punch" class="screen">
+          <div id="punch-motion-ui" style="width: 100%;">
+            <h2 class="pulse-text" style="color: var(--accent); font-size: 72px; text-shadow: 6px 6px 0 #000; margin: 0;">PUNCH!</h2>
+            <p style="color: var(--accent-good); margin: 24px 0; font-size: 20px; font-weight: bold; text-transform: uppercase; letter-spacing: 2px;">Now!</p>
+          </div>
+          <div id="punch-fallback-ui" style="display: none; width: 100%;">
+            <h2 style="color: var(--accent-alt); font-size: 32px; margin-bottom: 24px;">CHARGE MODE</h2>
+            <div class="charge-bar" style="height: 48px; border-width: 4px; margin-bottom: 40px;">
               <div id="fallback-charge-fill" class="charge-fill"></div>
             </div>
-            <button id="btn-fallback-charge" class="charge-button" style="margin-top: 20px;">按住蓄力</button>
+            <button id="btn-fallback-charge" class="charge-button" style="height: 100px; font-size: 28px;">HOLD TO CHARGE</button>
           </div>
         </section>
 
+        <!-- RESULT SCREEN -->
         <section id="screen-result" class="screen">
-          <h2>测试结果</h2>
-          <p id="res-message" style="color: var(--muted); margin: 8px 0 24px;"></p>
-          <div class="result-grid" style="margin-bottom: 32px; width: 100%; max-width: 400px;">
-            <div class="result-card result-score">
-              <span class="result-label">分数</span>
-              <strong id="res-score">--</strong>
+          <h2 style="font-size: 56px; color: #fff; margin: 0; text-shadow: 4px 4px 0 #000;">K.O.</h2>
+          <p id="res-message" class="result-message" style="margin: 24px 0; width: 100%;"></p>
+          
+          <div class="result-grid" style="margin-bottom: 40px; width: 100%;">
+            <div class="result-card result-score" style="grid-column: span 2; padding: 32px 16px;">
+              <span class="result-label" style="font-size: 18px;">SCORE</span>
+              <strong id="res-score" style="font-size: 96px; line-height: 1; margin-top: 16px;">--</strong>
             </div>
-            <div class="result-card">
-              <span class="result-label">峰值</span>
-              <strong id="res-peak">--</strong>
+            <div class="result-card" style="grid-column: span 2;">
+              <span class="result-label">PEAK MAGNITUDE</span>
+              <strong id="res-peak" style="font-size: 32px;">--</strong>
             </div>
           </div>
-          <div style="display: flex; gap: 16px; justify-content: center;">
-            <button id="btn-retry" class="accent-button">再来一次</button>
-            <button id="btn-home" class="secondary-button">返回首页</button>
+          
+          <div style="display: flex; flex-direction: column; gap: 16px; width: 100%;">
+            <button id="btn-retry" class="accent-button" style="font-size: 24px; padding: 20px;">FIGHT AGAIN</button>
+            <button id="btn-home" class="ghost-button">MAIN MENU</button>
           </div>
         </section>
+
       </main>
     </div>
 
@@ -85,34 +96,21 @@
           if (mutation.type === 'childList' || mutation.type === 'characterData') {
             const target = mutation.target.nodeType === 3 ? mutation.target.parentElement : mutation.target;
             
-            if (target.id === 'result-score' && target.textContent !== '--') {
+            if (target.id === 'res-score' && target.textContent !== '--') {
               target.classList.remove('pop-anim');
               void target.offsetWidth;
               target.classList.add('pop-anim');
-              
-              const resultPanel = document.querySelector('.panel-result');
-              resultPanel.classList.remove('fade-in-anim');
-              void resultPanel.offsetWidth;
-              resultPanel.classList.add('fade-in-anim');
             }
             
-            if (target.id === 'charge-value') {
-              target.classList.remove('scale-anim');
+            if (target.id === 'countdown-display') {
+              target.classList.remove('pop-anim');
               void target.offsetWidth;
-              target.classList.add('scale-anim');
-            }
-            
-            if (target.id === 'status-chip') {
-              if (target.textContent === '测试中') {
-                document.body.classList.add('is-punching');
-              } else {
-                document.body.classList.remove('is-punching');
-              }
+              target.classList.add('pop-anim');
             }
           }
         });
       });
-      observer.observe(document.querySelector('.dashboard'), { childList: true, subtree: true, characterData: true });
+      observer.observe(document.querySelector('#app-container'), { childList: true, subtree: true, characterData: true });
     </script>
   </body>
 </html>
