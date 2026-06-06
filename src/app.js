@@ -40,8 +40,9 @@ const motionController = createMotionController({
     
     // Real-time punch feedback
     if (snapshot.isPunchTestActive && bagPunch) {
-      const scale = 1 + Math.min(snapshot.peakDelta / 40, 0.5);
-      const rotate = Math.sin(Date.now() / 50) * (snapshot.peakDelta / 2);
+      const delta = snapshot.peakDelta || 0;
+      const scale = 1 + Math.min(delta / 20, 0.4);
+      const rotate = Math.sin(Date.now() / 50) * (delta / 1.5);
       bagPunch.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
     }
   }

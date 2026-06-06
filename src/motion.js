@@ -6,8 +6,8 @@ const DEFAULT_METRICS = {
 };
 
 const SMOOTHING_ALPHA = 0.28;
-const MOTION_SCORE_ACTIVATION_DELTA = 8;
-const MOTION_SCORE_MAX_DELTA = 52;
+const MOTION_SCORE_ACTIVATION_DELTA = 3;
+const MOTION_SCORE_MAX_DELTA = 35;
 const MOTION_SCORE_OVERDRIVE_DELTA = 18;
 const MOTION_SCORE_OVERDRIVE_BONUS = 20;
 
@@ -256,14 +256,14 @@ export function createMotionController({ onUpdate } = {}) {
         resolve();
       };
 
-      // Poll to see if a punch happened (peakDelta > 15)
+      // Poll to see if a punch happened (peakDelta > 5)
       checkIntervalId = window.setInterval(() => {
-        if (!hitDetected && state.peakDelta > 15) {
+        if (!hitDetected && state.peakDelta > 5) {
           hitDetected = true;
           hitTime = Date.now();
         }
-        // If hit was detected, resolve 400ms after the hit to capture the full peak
-        if (hitDetected && (Date.now() - hitTime > 400)) {
+        // If hit was detected, resolve 300ms after the hit to capture the full peak
+        if (hitDetected && (Date.now() - hitTime > 300)) {
           finish();
         }
       }, 50);
