@@ -223,7 +223,7 @@ export function createMotionController({ onUpdate } = {}) {
     };
   }
 
-  async function startPunchTest(durationMs = 1500) {
+  async function startPunchTest(durationMs = 2500) {
     if (state.permissionStatus !== 'granted') {
       throw new Error('当前没有可用的动作权限，请先授权或改用备用模式。');
     }
@@ -244,7 +244,33 @@ export function createMotionController({ onUpdate } = {}) {
     state.statusMessage = '挥拳窗口已开启，请立即完成一次短幅度挥拳。';
     emit();
 
-    await new Promise((resolve) => window.setTimeout(resolve, durationMs));
+    await new Promise((resolve) => {
+      let timeoutId;
+      let checkIntervalId;
+      let hitDetected = false;
+      let hitTime = 0;
+
+      const finish = () => {
+        window.clearTimeout(timeoutId);
+        window.clearInterval(checkIntervalId);
+        resolve();
+      };
+
+      // Poll to see if a punch happened (peakDelta > 15)
+      checkIntervalId = window.setInterval(() => {
+        if (!hitDetected && state.peakDelta > 15) {
+          hitDetected = true;
+          hitTime = Date.now();
+        }
+        // If hit was detected, resolve 400ms after the hit to capture the full peak
+        if (hitDetected && (Date.now() - hitTime > 400)) {
+          finish();
+        }
+      }, 50);
+
+      // Max duration fallback
+      timeoutId = window.setTimeout(finish, durationMs);
+    });
 
     state.isPunchTestActive = false;
     const score = mapMotionScore(state.peakDelta);

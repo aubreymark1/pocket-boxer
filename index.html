@@ -68,7 +68,10 @@
           </div>
 
           <div id="punch-fallback-ui" style="display: none; width: 100%; position: absolute; bottom: 40px; padding: 0 24px;">
-            <h2 style="color: var(--accent-alt); font-size: 24px; margin-bottom: 16px;">长按蓄力，松手出拳</h2>
+            <div style="background: rgba(255, 140, 0, 0.15); border: 2px dashed var(--accent-warn); padding: 12px; margin-bottom: 16px; border-radius: 8px;">
+              <h2 style="color: var(--accent-alt); font-size: 20px; margin-bottom: 8px;">传感器不可用</h2>
+              <p style="color: #fff; font-size: 14px; margin: 0;">已切换至蓄力模式，请长按下方按钮蓄力，松手出拳</p>
+            </div>
             <div class="charge-bar" style="height: 36px; border-width: 3px; margin-bottom: 24px;">
               <div id="fallback-charge-fill" class="charge-fill"></div>
             </div>

@@ -29,11 +29,20 @@ const resultTitle = document.getElementById('result-title');
 const appContainer = document.getElementById('app-container');
 const bagResult = document.getElementById('bag-result');
 
+const bagPunch = document.getElementById('bag-punch');
+
 // Initialize motion controller
 const motionController = createMotionController({
   onUpdate(snapshot) {
     if (snapshot.chargeActive && chargeFill) {
       chargeFill.style.width = `${snapshot.fallbackCharge}%`;
+    }
+    
+    // Real-time punch feedback
+    if (snapshot.isPunchTestActive && bagPunch) {
+      const scale = 1 + Math.min(snapshot.peakDelta / 40, 0.5);
+      const rotate = Math.sin(Date.now() / 50) * (snapshot.peakDelta / 2);
+      bagPunch.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
     }
   }
 });
@@ -88,6 +97,10 @@ async function startPunch() {
   if (state.mode === 'motion') {
     motionUi.style.display = 'block';
     fallbackUi.style.display = 'none';
+    if (bagPunch) {
+      bagPunch.style.transform = 'scale(1) rotate(0deg)';
+      bagPunch.style.transition = 'none'; // fast reaction
+    }
     
     try {
       const result = await motionController.startPunchTest();
