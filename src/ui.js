@@ -126,6 +126,25 @@ function renderCalibrating(state) {
   `;
 }
 
+function renderCountdown(state) {
+  const value = state.countdownValue !== undefined ? state.countdownValue : '3';
+  const isPunch = value === 'PUNCH!' || value === 0;
+  
+  if (isPunch) {
+    return `
+      <div class="game-container">
+        <div class="punch-text">PUNCH!</div>
+      </div>
+    `;
+  }
+  
+  return `
+    <div class="game-container">
+      <div class="countdown-number" key="${value}">${value}</div>
+    </div>
+  `;
+}
+
 export function renderUI(state) {
   if (!currentAppShell) return;
 
@@ -141,6 +160,9 @@ export function renderUI(state) {
       break;
     case 'calibrating':
       html = renderCalibrating(state);
+      break;
+    case 'countdown':
+      html = renderCountdown(state);
       break;
     default:
       html = renderHome(state);
