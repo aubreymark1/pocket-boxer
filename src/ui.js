@@ -24,7 +24,9 @@ const injectedCSS = `
     font-size: 12vw;
     font-weight: bold;
     margin-bottom: 10px;
-    width: 100%;
+    width: 80%;
+    margin-left: auto;
+    margin-right: auto;
   }
   .title-sub {
     font-size: 4vw;
