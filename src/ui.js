@@ -116,6 +116,16 @@ function renderSafety(state) {
   `;
 }
 
+function renderCalibrating(state) {
+  return `
+    <div class="game-container" style="background: #1a1e2e;">
+      <div class="calibrating-title">请保持手机静止</div>
+      <div class="loader"></div>
+      <div class="desc-text">${state.statusMessage || '正在获取传感器数据...'}</div>
+    </div>
+  `;
+}
+
 export function renderUI(state) {
   if (!currentAppShell) return;
 
@@ -128,6 +138,9 @@ export function renderUI(state) {
       break;
     case 'safety':
       html = renderSafety(state);
+      break;
+    case 'calibrating':
+      html = renderCalibrating(state);
       break;
     default:
       html = renderHome(state);
