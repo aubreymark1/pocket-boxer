@@ -76,6 +76,24 @@ button {
   font-family: var(--font-arcade);
 }
 
+.text-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  background: rgba(4, 8, 20, 0.72);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(255, 42, 166, 0.12), 0 10px 20px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-arcade);
+  letter-spacing: 0.4px;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: rgba(255, 42, 166, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 42, 166, 0.2), 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
 .app-shell {
   width: 100%;
   max-width: 480px;
@@ -935,6 +953,147 @@ button {
   color: #fff;
   font-size: 20px;
   box-shadow: 0 0 22px rgba(255, 42, 166, 0.26), 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pvp-action-button {
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34), 0 0 18px rgba(23, 241, 255, 0.12);
+}
+
+.pvp-action-button:disabled {
+  border: none;
+}
+
+.pvp-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-alt);
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
+.pvp-lobby-list-panel {
+  gap: 12px;
+}
+
+.pvp-lobby-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pvp-room-list-title,
+.pvp-room-list-meta {
+  font-family: var(--font-arcade);
+}
+
+.pvp-room-list-title {
+  color: var(--accent-alt);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.pvp-room-list-meta,
+.pvp-room-list-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pvp-room-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pvp-room-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(23, 241, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 14px;
+  color: #fff;
+  display: grid;
+  gap: 6px;
+  transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.pvp-room-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(23, 241, 255, 0.38);
+}
+
+.pvp-room-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pvp-room-card-code {
+  font-family: var(--font-arcade);
+  color: var(--accent-good);
+  font-size: 18px;
+}
+
+.pvp-room-card-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pvp-spectator-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(23, 241, 255, 0.18);
+  background: linear-gradient(135deg, rgba(7, 15, 31, 0.96), rgba(17, 12, 42, 0.92));
+  border-radius: 16px;
+  padding: 14px;
+  color: #fff;
+  display: grid;
+  gap: 8px;
+  transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+  box-shadow: var(--panel-glow);
+}
+
+.pvp-spectator-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(23, 241, 255, 0.4);
+}
+
+.pvp-spectator-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pvp-spectator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pvp-spectator-matchup {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.pvp-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  color: var(--accent-alt);
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ghost-button {
