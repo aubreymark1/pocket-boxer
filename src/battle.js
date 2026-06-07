@@ -1,5 +1,6 @@
 const MAX_ROUNDS = 3;
 const STARTING_HP = 100;
+const SCORE_MAX = 1000;
 
 function clampHp(value) {
   return Math.max(0, Math.round(value));
@@ -19,6 +20,17 @@ function getWinner(playerHp, robotHp) {
   }
 
   return 'draw';
+}
+
+function scoreToDamage(score) {
+  const safeScore = Math.max(0, Math.min(SCORE_MAX, Math.round(score)));
+
+  if (safeScore <= 800) {
+    return Math.max(8, Math.round((safeScore / 800) * 58));
+  }
+
+  const highScoreProgress = (safeScore - 800) / 200;
+  return Math.max(8, Math.round(58 + highScoreProgress * 18));
 }
 
 export function createBattleController() {
@@ -70,9 +82,9 @@ export function createBattleController() {
       throw new Error('战斗尚未开始。');
     }
 
-    const score = Math.max(0, Math.min(100, Math.round(result.score ?? 0)));
+    const score = Math.max(0, Math.min(SCORE_MAX, Math.round(result.score ?? 0)));
     const round = state.currentRound;
-    const playerDamage = Math.max(1, Math.round(score * 0.5));
+    const playerDamage = scoreToDamage(score);
     const robotDamage = Math.max(1, Math.round(playerDamage * randomRobotMultiplier()));
 
     state.robotHp = clampHp(state.robotHp - playerDamage);

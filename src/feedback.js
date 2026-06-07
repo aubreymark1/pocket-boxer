@@ -207,15 +207,61 @@ function playCountdownSound() {
 }
 
 function playPunchSound() {
-  return playSequence([
-    { fromFrequency: 180, frequency: 70, duration: 0.12, volume: 0.07, type: 'sawtooth', gap: 0.06 },
-    { fromFrequency: 95, frequency: 55, duration: 0.08, volume: 0.05, type: 'triangle', gap: 0.08 },
-  ]);
+  const context = getAudioContext();
+  if (!context) {
+    return false;
+  }
+
+  const sequence = [
+    { fromFrequency: 420, frequency: 120, duration: 0.085, volume: 0.055, type: 'sawtooth', gap: 0.045 },
+    { fromFrequency: 150, frequency: 62, duration: 0.11, volume: 0.08, type: 'triangle', gap: 0.06 },
+    { fromFrequency: 84, frequency: 42, duration: 0.09, volume: 0.04, type: 'sine', gap: 0.08 },
+  ];
+
+  const playBurst = () => {
+    const baseTime = context.currentTime + 0.01;
+    scheduleNoiseBurst(context, {
+      duration: 0.055,
+      attack: 0.003,
+      volume: 0.055,
+      frequency: 980,
+      q: 1.6,
+    }, baseTime);
+    scheduleNoiseBurst(context, {
+      duration: 0.12,
+      attack: 0.006,
+      volume: 0.03,
+      filterType: 'lowpass',
+      frequency: 260,
+      q: 0.9,
+    }, baseTime + 0.012);
+  };
+
+  try {
+    if (context.state === 'running') {
+      playSequence(sequence);
+      playBurst();
+      return true;
+    }
+
+    unlockAudio()
+      .then((ready) => {
+        if (ready) {
+          playSequence(sequence);
+          playBurst();
+        }
+      })
+      .catch(() => {});
+  } catch (_error) {
+    return false;
+  }
+
+  return false;
 }
 
 function playHitSound(score = 50) {
-  const isHeavyHit = score >= 70;
-  const isCriticalHit = score >= 90;
+  const isHeavyHit = score >= 700;
+  const isCriticalHit = score >= 900;
   const context = getAudioContext();
   if (!context) {
     return false;
@@ -386,12 +432,12 @@ export const feedbackModule = {
     playDefeatSound();
   },
   scorePulse(score) {
-    if (score >= 80) {
+    if (score >= 800) {
       vibrate([40, 50, 40, 50, 40]);
       return;
     }
 
-    if (score >= 40) {
+    if (score >= 420) {
       vibrate([28, 40, 28]);
       return;
     }

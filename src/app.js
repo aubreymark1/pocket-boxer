@@ -5,6 +5,20 @@ import { createBattleController } from './battle.js';
 const MODE_TEST = 'test';
 const MODE_BATTLE = 'battle';
 const DEFAULT_BATTLE_CHALLENGE = '拳击机器人';
+const BUTTON_PUNCH_POP_MS = 560;
+const BUTTON_PUNCH_TRANSITION_DELAY_MS = 180;
+const COUNTDOWN_PUNCH_CUE_MS = 680;
+const MOTION_PUNCH_AUDIO_DELTA = 8;
+const SCORE_MAX = 1000;
+const BATTLE_DAMAGE_SCALE = 0.075;
+const BATTLE_TIMINGS = {
+  postPunchTransition: 260,
+  playerWindup: 260,
+  playerImpactHold: 760,
+  robotWindup: 260,
+  robotImpactHold: 840,
+  nextRoundBuffer: 1250,
+};
 
 const screens = {
   home: document.getElementById('screen-home'),
@@ -96,6 +110,7 @@ const battleFinalScore = document.getElementById('battle-final-score');
 const bagPunch = document.getElementById('bag-punch');
 let motionPunchCuePlayed = false;
 let pointerActive = false;
+const buttonPopTimeouts = new WeakMap();
 
 const appState = {
   selectedMode: MODE_TEST,
@@ -118,7 +133,7 @@ const motionController = createMotionController({
       const rotate = Math.sin(Date.now() / 50) * (delta / 1.5);
       bagPunch.style.transform = `scale(${scale}) rotate(${rotate}deg)`;
 
-      if (!motionPunchCuePlayed && delta > 5) {
+      if (!motionPunchCuePlayed && delta >= MOTION_PUNCH_AUDIO_DELTA) {
         motionPunchCuePlayed = true;
         feedbackModule.punch();
       }
@@ -138,6 +153,40 @@ function showScreen(screenName) {
   }
 }
 
+function triggerButtonPunchPop(button) {
+  if (!(button instanceof HTMLElement)) {
+    return;
+  }
+
+  button.classList.remove('button-punch-pop');
+  void button.offsetWidth;
+  button.classList.add('button-punch-pop');
+
+  const existingTimeout = buttonPopTimeouts.get(button);
+  if (existingTimeout) {
+    window.clearTimeout(existingTimeout);
+  }
+
+  const timeoutId = window.setTimeout(() => {
+    button.classList.remove('button-punch-pop');
+    buttonPopTimeouts.delete(button);
+  }, BUTTON_PUNCH_POP_MS);
+
+  buttonPopTimeouts.set(button, timeoutId);
+}
+
+function runAfterButtonPunchPop(button, callback, delayMs = BUTTON_PUNCH_TRANSITION_DELAY_MS) {
+  triggerButtonPunchPop(button);
+  window.setTimeout(() => {
+    callback();
+  }, delayMs);
+}
+
+function setCountdownDisplay(value, { isPunchCue = false } = {}) {
+  countdownDisplay.textContent = value;
+  countdownDisplay.classList.toggle('is-punch-cue', isPunchCue);
+}
+
 function goHome() {
   motionController.resetResult();
   pointerActive = false;
@@ -149,7 +198,7 @@ function goHome() {
 }
 
 function normalizeScore(rawScore) {
-  return Math.max(0, Math.min(100, Math.round(rawScore ?? 0)));
+  return Math.max(0, Math.min(SCORE_MAX, Math.round(rawScore ?? 0)));
 }
 
 function escapeHtml(value) {
@@ -306,7 +355,7 @@ function syncBattleChallengeFromInput() {
 }
 
 function getScoreMeta(score) {
-  if (score <= 30) {
+  if (score <= 180) {
     return {
       rating: '轻轻一碰',
       subtitle: '试探新手',
@@ -315,7 +364,7 @@ function getScoreMeta(score) {
     };
   }
 
-  if (score <= 50) {
+  if (score <= 420) {
     return {
       rating: '普通直拳',
       subtitle: '稳定出拳手',
@@ -324,7 +373,7 @@ function getScoreMeta(score) {
     };
   }
 
-  if (score <= 70) {
+  if (score <= 650) {
     return {
       rating: '重拳出击',
       subtitle: '擂台压迫者',
@@ -333,7 +382,7 @@ function getScoreMeta(score) {
     };
   }
 
-  if (score <= 90) {
+  if (score <= 800) {
     return {
       rating: '爆裂一击',
       subtitle: '校园拳王',
@@ -342,10 +391,19 @@ function getScoreMeta(score) {
     };
   }
 
+  if (score <= 920) {
+    return {
+      rating: '拳王降临',
+      subtitle: '赛博拳王',
+      vibe: '高分硬核区',
+      tier: 'S',
+    };
+  }
+
   return {
-    rating: '拳王降临',
-    subtitle: '赛博拳王',
-    vibe: '空气撕裂级',
+    rating: '极限粉碎',
+    subtitle: '街机传说',
+    vibe: '一拳打穿机器',
     tier: 'SS',
   };
 }
@@ -356,7 +414,7 @@ function buildPunchResult(rawResult) {
   return {
     ...rawResult,
     score,
-    damage: Math.max(1, Math.round(score * 0.5)),
+    damage: Math.max(10, Math.round(score * BATTLE_DAMAGE_SCALE)),
     meta,
   };
 }
@@ -387,7 +445,7 @@ function configureSafetyScreen() {
 
 function playResultOutcome(result) {
   window.setTimeout(() => {
-    if (result.score >= 71) {
+    if (result.score >= 720) {
       feedbackModule.victory();
       return;
     }
@@ -428,20 +486,21 @@ async function proceedFromSafety() {
 async function startCountdown(context) {
   appState.activePunchContext = context;
   showScreen('countdown');
+  setCountdownDisplay('3');
   countdownContext.textContent = context === MODE_BATTLE
     ? `模式二 · Round ${battleController.getSnapshot().currentRound}`
     : '模式一：出拳测试';
 
   for (let i = 3; i > 0; i -= 1) {
-    countdownDisplay.textContent = i;
+    setCountdownDisplay(String(i));
     feedbackModule.countdownTick();
     feedbackModule.softPulse();
     await new Promise((resolve) => setTimeout(resolve, 1000));
   }
 
-  countdownDisplay.textContent = 'PUNCH!';
+  setCountdownDisplay('PUNCH!', { isPunchCue: true });
   feedbackModule.countdownTick();
-  await new Promise((resolve) => setTimeout(resolve, 450));
+  await new Promise((resolve) => setTimeout(resolve, COUNTDOWN_PUNCH_CUE_MS));
   await startPunch(context);
 }
 
@@ -504,15 +563,15 @@ function showModeOneResult(rawResult) {
   resTitle.textContent = meta.subtitle;
   resCopy.textContent = meta.vibe;
   resTier.textContent = meta.tier;
-  resMeterLabel.textContent = `${result.score} / 100`;
-  resMeterFill.style.width = `${result.score}%`;
+  resMeterLabel.textContent = `${result.score} / ${SCORE_MAX}`;
+  resMeterFill.style.width = `${(result.score / SCORE_MAX) * 100}%`;
   resTier.className = `result-rank-tier is-${String(meta.tier).toLowerCase()}`;
   resMeterFill.className = `result-meter-fill is-${String(meta.tier).toLowerCase()}`;
 
-  if (result.score >= 91) {
+  if (result.score >= 900) {
     resDamage.style.color = 'var(--accent-good)';
     resRating.style.color = 'var(--accent-good)';
-  } else if (result.score >= 71) {
+  } else if (result.score >= 700) {
     resDamage.style.color = 'var(--accent-alt)';
     resRating.style.color = 'var(--accent-alt)';
   } else {
@@ -558,12 +617,12 @@ async function playBattleStatusAnimation(snapshot) {
   battleStatusPhase.textContent = narrative.playerStrikePhase;
   battleArena.classList.add('is-player-strike');
   fighterPlayer.classList.add('is-attacking');
-  await wait(180);
+  await wait(BATTLE_TIMINGS.playerWindup);
   battleArena.classList.add('is-impact');
   fighterRobot.classList.add('is-hit');
   battlePopupRobot.classList.add('is-active');
   feedbackModule.hit(roundSummary.score);
-  await wait(560);
+  await wait(BATTLE_TIMINGS.playerImpactHold);
 
   if (battleFinished && winner === 'win') {
     resetBattlePlaybackUi();
@@ -583,12 +642,12 @@ async function playBattleStatusAnimation(snapshot) {
   battleStatusPhase.textContent = narrative.robotCounterPhase;
   battleArena.classList.add('is-robot-strike');
   fighterRobot.classList.add('is-countering');
-  await wait(180);
+  await wait(BATTLE_TIMINGS.robotWindup);
   battleArena.classList.add('is-impact');
   fighterPlayer.classList.add('is-hit');
   battlePopupPlayer.classList.add('is-active');
   feedbackModule.defeat();
-  await wait(620);
+  await wait(BATTLE_TIMINGS.robotImpactHold);
 
   resetBattlePlaybackUi();
   if (battleFinished) {
@@ -633,7 +692,7 @@ async function showBattleStatus(snapshot) {
   }
 
   battleStatusPhase.textContent = `Round ${snapshot.currentRound} 即将开始...`;
-  await wait(700);
+  await wait(BATTLE_TIMINGS.nextRoundBuffer);
 
   if (autoAdvanceToken !== appState.battleAutoAdvanceToken) {
     return;
@@ -705,13 +764,13 @@ function winnerMessageForAutoResult(snapshot, displayName) {
   return `你和「${displayName}」势均力敌，战斗结果正在展开...`;
 }
 
-function handleBattlePunch(rawResult) {
+async function handleBattlePunch(rawResult) {
   const result = buildPunchResult(rawResult);
   const snapshot = battleController.resolveRound(result);
   feedbackModule.scorePulse(result.score);
   animateImpact(result.score);
-
-  void showBattleStatus(snapshot);
+  await wait(BATTLE_TIMINGS.postPunchTransition);
+  await showBattleStatus(snapshot);
 }
 
 function handlePunchResult(rawResult) {
@@ -719,7 +778,7 @@ function handlePunchResult(rawResult) {
   pointerActive = false;
 
   if (appState.activePunchContext === MODE_BATTLE) {
-    handleBattlePunch(rawResult);
+    void handleBattlePunch(rawResult);
     return;
   }
 
@@ -761,11 +820,19 @@ document.addEventListener('click', (event) => {
   const target = event.target;
   if (target instanceof Element && target.closest('button')) {
     feedbackModule.tap();
+    const accentButton = target.closest('.accent-button');
+    if (accentButton instanceof HTMLElement) {
+      triggerButtonPunchPop(accentButton);
+    }
   }
 }, true);
 
-btnModeTest.addEventListener('click', startModeOne);
-btnModeBattle.addEventListener('click', openBattlePrep);
+btnModeTest.addEventListener('click', () => {
+  runAfterButtonPunchPop(btnModeTest, startModeOne);
+});
+btnModeBattle.addEventListener('click', () => {
+  runAfterButtonPunchPop(btnModeBattle, openBattlePrep);
+});
 btnModePvp.addEventListener('click', () => showScreen('pvp'));
 btnPvpHome.addEventListener('click', goHome);
 

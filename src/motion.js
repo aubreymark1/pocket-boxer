@@ -6,36 +6,56 @@ const DEFAULT_METRICS = {
 };
 
 const SMOOTHING_ALPHA = 0.28;
-const MOTION_SCORE_ACTIVATION_DELTA = 3;
-const MOTION_SCORE_MAX_DELTA = 35;
-const MOTION_SCORE_OVERDRIVE_DELTA = 18;
-const MOTION_SCORE_OVERDRIVE_BONUS = 20;
+const MOTION_SCORE_ACTIVATION_DELTA = 7.2;
+const MOTION_SCORE_MAX_DELTA = 78;
+const SCORE_MAX = 1000;
+const SCORE_MIDPOINT_RATIO = 0.74;
+const SCORE_HIGH_THRESHOLD_RATIO = 0.97;
+const SCORE_MIDPOINT = 280;
+const SCORE_HIGH_THRESHOLD = 680;
 
 function round(value) {
   return Number(value.toFixed(2));
 }
 
+function mapNormalizedScore(normalizedValue) {
+  const normalized = Math.max(0, Math.min(normalizedValue, 1));
+
+  if (normalized <= SCORE_MIDPOINT_RATIO) {
+    return Math.round((normalized / SCORE_MIDPOINT_RATIO) * SCORE_MIDPOINT);
+  }
+
+  if (normalized <= SCORE_HIGH_THRESHOLD_RATIO) {
+    const progress = (normalized - SCORE_MIDPOINT_RATIO) / (SCORE_HIGH_THRESHOLD_RATIO - SCORE_MIDPOINT_RATIO);
+    return Math.round(SCORE_MIDPOINT + Math.pow(progress, 1.55) * (SCORE_HIGH_THRESHOLD - SCORE_MIDPOINT));
+  }
+
+  const highProgress = (normalized - SCORE_HIGH_THRESHOLD_RATIO) / (1 - SCORE_HIGH_THRESHOLD_RATIO);
+  const curvedProgress = Math.pow(highProgress, 4.2);
+  return Math.round(SCORE_HIGH_THRESHOLD + curvedProgress * (SCORE_MAX - SCORE_HIGH_THRESHOLD));
+}
+
 function describeScore(score, source) {
   if (source === 'fallback') {
-    if (score >= 85) {
-      return '备用模式也打出了很高的分数，可以继续演示。';
+    if (score >= 800) {
+      return '备用模式也冲进了高分区，已经能支撑演示高潮。';
     }
-    if (score >= 55) {
-      return '备用模式有效，分数输出稳定。';
+    if (score >= 500) {
+      return '备用模式有效，分数输出稳定，已经有明显强弱差。';
     }
     return '备用模式已出分，可以继续调节蓄力节奏。';
   }
 
-  if (score > 100) {
-    return '突破 100 分，已经进入极限爆发区间。';
+  if (score >= 900) {
+    return '这一拳已经接近拳力峰值，属于极限爆发区间。';
   }
-  if (score >= 90) {
-    return '这一下峰值很高，说明短幅度挥拳已经能被明显捕获。';
+  if (score >= 800) {
+    return '你已经冲进高分硬核区，后续每一分都会更难拿。';
   }
-  if (score >= 65) {
+  if (score >= 600) {
     return '挥拳识别有效，当前阈值已经具备基础可玩性。';
   }
-  if (score >= 35) {
+  if (score >= 320) {
     return '动作已被识别，但可以继续优化挥拳幅度或阈值。';
   }
   return '本次动作偏轻或窗口未命中，可以再试一次。';
@@ -149,11 +169,9 @@ export function createMotionController({ onUpdate } = {}) {
   function mapMotionScore(delta) {
     const adjustedDelta = Math.max(delta - MOTION_SCORE_ACTIVATION_DELTA, 0);
     const cappedDelta = Math.min(adjustedDelta, MOTION_SCORE_MAX_DELTA);
-    const baseScore = Math.round((cappedDelta / MOTION_SCORE_MAX_DELTA) * 100);
-    const overflowDelta = Math.max(adjustedDelta - MOTION_SCORE_MAX_DELTA, 0);
-    const cappedOverflowDelta = Math.min(overflowDelta, MOTION_SCORE_OVERDRIVE_DELTA);
-    const overflowScore = Math.round((cappedOverflowDelta / MOTION_SCORE_OVERDRIVE_DELTA) * MOTION_SCORE_OVERDRIVE_BONUS);
-    return baseScore + overflowScore;
+    const normalizedDelta = cappedDelta / MOTION_SCORE_MAX_DELTA;
+    const temperedDelta = Math.pow(normalizedDelta, 1.22);
+    return mapNormalizedScore(temperedDelta);
   }
 
   async function requestPermission() {
@@ -310,7 +328,7 @@ export function createMotionController({ onUpdate } = {}) {
 
     chargeIntervalId = window.setInterval(() => {
       const elapsed = Date.now() - chargeStartTime;
-      state.fallbackCharge = Math.min(100, Math.round(elapsed / 14));
+      state.fallbackCharge = Math.min(100, Math.round(elapsed / 18));
       emit();
     }, 40);
   }
@@ -324,7 +342,8 @@ export function createMotionController({ onUpdate } = {}) {
     window.clearInterval(chargeIntervalId);
     state.fallbackCharge = Math.min(100, Math.max(0, Math.round(state.fallbackCharge)));
 
-    const score = Math.max(8, state.fallbackCharge);
+    const normalizedCharge = state.fallbackCharge / 100;
+    const score = Math.max(80, mapNormalizedScore(normalizedCharge));
     state.result = {
       source: 'fallback',
       score,
