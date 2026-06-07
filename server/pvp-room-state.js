@@ -2,6 +2,10 @@ function countConnectedPlayers(room) {
   return ['A', 'B'].filter((role) => room.players[role]?.connected).length;
 }
 
+function isRoomSpectatable(room) {
+  return room.status === 'in_round' || room.status === 'between_rounds';
+}
+
 function getRoomHostName(room) {
   if (room.players.A?.connected) return room.players.A.name;
   if (room.players.B?.connected) return room.players.B.name;
@@ -23,6 +27,7 @@ export function createRoomState(code, hostName) {
       B: null,
     },
     sockets: new Set(),
+    spectators: new Set(),
   };
 }
 
@@ -42,6 +47,27 @@ export function getJoinableRooms(rooms) {
     .filter((room) => countConnectedPlayers(room) < 2)
     .sort((a, b) => a.createdAt - b.createdAt)
     .map(createRoomSummary);
+}
+
+export function createSpectatableRoomSummary(room) {
+  return {
+    roomCode: room.code,
+    playerAName: room.players.A?.name || 'Player A',
+    playerBName: room.players.B?.name || 'Player B',
+    round: room.round,
+    maxRounds: room.maxRounds,
+    wins: { ...room.wins },
+    status: room.status,
+    isSuddenDeath: room.round > room.maxRounds,
+  };
+}
+
+export function getSpectatableRooms(rooms) {
+  return Array.from(rooms.values())
+    .filter(isRoomSpectatable)
+    .filter((room) => room.players.A?.connected && room.players.B?.connected)
+    .sort((a, b) => a.createdAt - b.createdAt)
+    .map(createSpectatableRoomSummary);
 }
 
 function getMatchWinner(winsA, winsB) {

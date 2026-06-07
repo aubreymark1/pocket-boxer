@@ -965,6 +965,20 @@ button {
   border: none;
 }
 
+.pvp-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  width: fit-content;
+  padding: 6px 12px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--accent-alt);
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  letter-spacing: 1px;
+}
+
 .pvp-lobby-list-panel {
   gap: 12px;
 }
@@ -1030,6 +1044,56 @@ button {
 .pvp-room-card-meta {
   color: var(--muted);
   font-size: 13px;
+}
+
+.pvp-spectator-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(23, 241, 255, 0.18);
+  background: linear-gradient(135deg, rgba(7, 15, 31, 0.96), rgba(17, 12, 42, 0.92));
+  border-radius: 16px;
+  padding: 14px;
+  color: #fff;
+  display: grid;
+  gap: 8px;
+  transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+  box-shadow: var(--panel-glow);
+}
+
+.pvp-spectator-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(23, 241, 255, 0.4);
+}
+
+.pvp-spectator-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pvp-spectator-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pvp-spectator-matchup {
+  font-weight: 700;
+  font-size: 16px;
+}
+
+.pvp-state-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px 10px;
+  border-radius: 999px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  color: var(--accent-alt);
+  font-family: var(--font-arcade);
+  font-size: 11px;
+  letter-spacing: 1px;
+  background: rgba(255, 255, 255, 0.04);
 }
 
 .ghost-button {

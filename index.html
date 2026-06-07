@@ -392,6 +392,7 @@
               <button id="btn-pvp-leave" class="secondary-button pvp-action-button"
                 style="font-size: 18px; padding: 14px;" disabled>离开房间</button>
             </div>
+            <div id="pvp-mode-badge" class="pvp-mode-badge">PLAYER MODE</div>
             <div id="pvp-status" style="color: #fff; line-height: 1.8; font-size: 14px; opacity: 0.92;">未连接</div>
           </div>
         </div>
@@ -407,6 +408,17 @@
           <div id="pvp-room-list" class="pvp-room-list"></div>
         </div>
 
+        <div class="info-row pvp-lobby-list-panel" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 14px;">
+          <div class="pvp-lobby-list-head">
+            <div class="pvp-room-list-title">公开观战大厅</div>
+            <div id="pvp-spectator-list-meta" class="pvp-room-list-meta">连接服务器后显示</div>
+          </div>
+          <div id="pvp-spectator-list-empty" class="pvp-room-list-empty">
+            当前暂无可观战比赛。
+          </div>
+          <div id="pvp-spectator-list" class="pvp-room-list"></div>
+        </div>
+
         <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 14px;">
           <div style="display: grid; gap: 8px;">
             <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline;">
@@ -417,13 +429,13 @@
             </div>
             <div id="pvp-players" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
               <div class="info-row" style="padding: 14px;">
-                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">YOU</div>
+                <div id="pvp-player-you-label" style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">YOU</div>
                 <div id="pvp-player-you" style="font-size: 18px; color: #fff; font-weight: 700;">--</div>
                 <div id="pvp-player-you-ready" style="font-size: 12px; color: var(--muted); margin-top: 6px;">NOT READY
                 </div>
               </div>
               <div class="info-row" style="padding: 14px;">
-                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">OPPONENT</div>
+                <div id="pvp-player-opp-label" style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">OPPONENT</div>
                 <div id="pvp-player-opp" style="font-size: 18px; color: #fff; font-weight: 700;">--</div>
                 <div id="pvp-player-opp-ready" style="font-size: 12px; color: var(--muted); margin-top: 6px;">WAITING
                 </div>
@@ -436,12 +448,12 @@
                   -</div>
               </div>
               <div class="info-row" style="text-align: center; padding: 12px;">
-                <div style="font-size: 12px; color: var(--muted);">你本回合</div>
+                <div id="pvp-score-you-label" style="font-size: 12px; color: var(--muted);">你本回合</div>
                 <div id="pvp-score-you"
                   style="font-size: 26px; color: var(--accent-good); font-family: var(--font-arcade);">-</div>
               </div>
               <div class="info-row" style="text-align: center; padding: 12px;">
-                <div style="font-size: 12px; color: var(--muted);">对手本回合</div>
+                <div id="pvp-score-opp-label" style="font-size: 12px; color: var(--muted);">对手本回合</div>
                 <div id="pvp-score-opp" style="font-size: 26px; color: var(--accent); font-family: var(--font-arcade);">
                   -</div>
               </div>

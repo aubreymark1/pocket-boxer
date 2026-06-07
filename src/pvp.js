@@ -19,6 +19,9 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     role: '',
     room: null,
     roomList: [],
+    spectatableRooms: [],
+    viewMode: 'none',
+    watchedRoomCode: '',
     lastError: '',
   };
 
@@ -32,6 +35,9 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       role: state.role,
       room: state.room ? { ...state.room } : null,
       roomList: state.roomList.map((item) => ({ ...item })),
+      spectatableRooms: state.spectatableRooms.map((item) => ({ ...item })),
+      viewMode: state.viewMode,
+      watchedRoomCode: state.watchedRoomCode,
       lastError: state.lastError,
     });
   }
@@ -78,6 +84,9 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       state.roomCode = '';
       state.role = '';
       state.roomList = [];
+      state.spectatableRooms = [];
+      state.viewMode = 'none';
+      state.watchedRoomCode = '';
       setStatus('disconnected');
     });
 
@@ -96,8 +105,10 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       }
 
       if (type === 'joined') {
+        state.viewMode = 'player';
         state.roomCode = String(data?.roomCode || '');
         state.role = String(data?.role || '');
+        state.watchedRoomCode = '';
         state.room = data?.state || null;
         emitStatus();
       }
@@ -109,6 +120,27 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
 
       if (type === 'roomList') {
         state.roomList = Array.isArray(data) ? data.map((item) => ({ ...item })) : [];
+        emitStatus();
+      }
+
+      if (type === 'spectatableRooms') {
+        state.spectatableRooms = Array.isArray(data) ? data.map((item) => ({ ...item })) : [];
+        emitStatus();
+      }
+
+      if (type === 'spectatorJoined') {
+        state.viewMode = 'spectator';
+        state.roomCode = '';
+        state.role = '';
+        state.watchedRoomCode = String(data?.roomCode || '');
+        state.room = data?.state || null;
+        emitStatus();
+      }
+
+      if (type === 'spectatorLeft' || type === 'matchInterrupted') {
+        state.viewMode = 'none';
+        state.watchedRoomCode = '';
+        state.room = null;
         emitStatus();
       }
 
@@ -154,6 +186,21 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     wsSend(ws, { type: 'listRooms', data: {} });
   }
 
+  function listSpectatableRooms() {
+    if (!ensureConnected()) return;
+    wsSend(ws, { type: 'listSpectatableRooms', data: {} });
+  }
+
+  function watchRoom(roomCode) {
+    if (!ensureConnected()) return;
+    wsSend(ws, { type: 'watchRoom', data: { roomCode } });
+  }
+
+  function leaveSpectator() {
+    if (!ensureConnected()) return;
+    wsSend(ws, { type: 'leaveSpectator', data: {} });
+  }
+
   function getSnapshot() {
     return {
       url: state.url,
@@ -162,6 +209,9 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       role: state.role,
       room: state.room ? { ...state.room } : null,
       roomList: state.roomList.map((item) => ({ ...item })),
+      spectatableRooms: state.spectatableRooms.map((item) => ({ ...item })),
+      viewMode: state.viewMode,
+      watchedRoomCode: state.watchedRoomCode,
       lastError: state.lastError,
     };
   }
@@ -174,6 +224,9 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     sendPunch,
     leave,
     listRooms,
+    listSpectatableRooms,
+    watchRoom,
+    leaveSpectator,
     getSnapshot,
   };
 }

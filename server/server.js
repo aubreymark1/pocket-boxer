@@ -3,6 +3,7 @@ import { WebSocketServer } from 'ws';
 import {
   createRoomState,
   getJoinableRooms,
+  getSpectatableRooms,
   resolveMatchProgress,
 } from './pvp-room-state.js';
 
@@ -46,6 +47,7 @@ function roomPublicState(room) {
     players,
     wins: { ...room.wins },
     results: room.results.map((item) => ({ ...item })),
+    spectatorCount: room.spectators.size,
   };
 }
 
@@ -57,6 +59,9 @@ function broadcastRoom(room) {
   for (const ws of room.sockets) {
     wsSend(ws, payload);
   }
+  for (const ws of room.spectators) {
+    wsSend(ws, payload);
+  }
 }
 
 function joinableRoomsPayload() {
@@ -66,8 +71,19 @@ function joinableRoomsPayload() {
   };
 }
 
+function spectatableRoomsPayload() {
+  return {
+    type: 'spectatableRooms',
+    data: getSpectatableRooms(rooms),
+  };
+}
+
 function sendRoomList(ws) {
   wsSend(ws, joinableRoomsPayload());
+}
+
+function sendSpectatableRooms(ws) {
+  wsSend(ws, spectatableRoomsPayload());
 }
 
 function broadcastJoinableRooms() {
@@ -79,6 +95,48 @@ function broadcastJoinableRooms() {
   }
 }
 
+function broadcastSpectatableRooms() {
+  if (!wss) return;
+
+  const payload = spectatableRoomsPayload();
+  for (const ws of wss.clients) {
+    wsSend(ws, payload);
+  }
+}
+
+function broadcastAudience(room, message) {
+  for (const ws of room.sockets) {
+    wsSend(ws, message);
+  }
+  for (const ws of room.spectators) {
+    wsSend(ws, message);
+  }
+}
+
+function refreshPublicLists() {
+  broadcastJoinableRooms();
+  broadcastSpectatableRooms();
+}
+
+function removeSpectatorFromRoom(ws) {
+  const roomCode = ws.__spectatingRoomCode;
+  if (!roomCode) return null;
+
+  ws.__spectatingRoomCode = null;
+  const room = rooms.get(roomCode);
+  if (!room) return null;
+  room.spectators.delete(ws);
+  return room;
+}
+
+function clearSpectatorsForInterruptedRoom(room, message) {
+  for (const spectator of room.spectators) {
+    spectator.__spectatingRoomCode = null;
+    wsSend(spectator, { type: 'matchInterrupted', data: message });
+  }
+  room.spectators.clear();
+}
+
 function startRound(room, round) {
   room.status = 'in_round';
   room.round = round;
@@ -88,11 +146,9 @@ function startRound(room, round) {
   const startAt = Date.now() + 400;
   const durationMs = 2500;
   const msg = { type: 'startRound', data: { round, startAt, durationMs } };
-  for (const ws of room.sockets) {
-    wsSend(ws, msg);
-  }
+  broadcastAudience(room, msg);
   broadcastRoom(room);
-  broadcastJoinableRooms();
+  refreshPublicLists();
 }
 
 function tryResolveRound(room) {
@@ -110,9 +166,7 @@ function tryResolveRound(room) {
   room.results.push(roundResult);
 
   const msg = { type: 'roundResult', data: roundResult };
-  for (const ws of room.sockets) {
-    wsSend(ws, msg);
-  }
+  broadcastAudience(room, msg);
 
   const progress = resolveMatchProgress({
     round: room.round,
@@ -131,17 +185,15 @@ function tryResolveRound(room) {
         results: room.results.map((x) => ({ ...x })),
       },
     };
-    for (const ws of room.sockets) {
-      wsSend(ws, endMsg);
-    }
+    broadcastAudience(room, endMsg);
     broadcastRoom(room);
-    broadcastJoinableRooms();
+    refreshPublicLists();
     return;
   }
 
   room.status = 'between_rounds';
   broadcastRoom(room);
-  broadcastJoinableRooms();
+  refreshPublicLists();
   setTimeout(() => startRound(room, progress.nextRound), BETWEEN_ROUNDS_MS);
 }
 
@@ -162,18 +214,25 @@ function removeSocketFromRoom(ws) {
     room.players[role].ready = false;
   }
 
+  if (room.spectators.size) {
+    clearSpectatorsForInterruptedRoom(room, {
+      roomCode,
+      message: '比赛中断：有玩家离开了房间。',
+    });
+  }
+
   for (const other of room.sockets) {
     wsSend(other, { type: 'opponentLeft', data: { role } });
   }
 
   if (room.sockets.size === 0) {
     rooms.delete(roomCode);
-    broadcastJoinableRooms();
+    refreshPublicLists();
     return;
   }
 
   broadcastRoom(room);
-  broadcastJoinableRooms();
+  refreshPublicLists();
 }
 
 const server = http.createServer((req, res) => {
@@ -192,6 +251,7 @@ wss = new WebSocketServer({ server });
 wss.on('connection', (ws) => {
   ws.__roomCode = null;
   ws.__role = null;
+  ws.__spectatingRoomCode = null;
 
   ws.on('message', (raw) => {
     const message = safeJsonParse(String(raw));
@@ -208,7 +268,17 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    if (type === 'listSpectatableRooms') {
+      sendSpectatableRooms(ws);
+      return;
+    }
+
     if (type === 'create') {
+      removeSpectatorFromRoom(ws);
+      if (ws.__roomCode) {
+        wsSend(ws, { type: 'error', data: { message: 'Already in a room.' } });
+        return;
+      }
       const name = String(data.name || 'Player').slice(0, 18);
       let code = generateRoomCode();
       while (rooms.has(code)) code = generateRoomCode();
@@ -222,11 +292,16 @@ wss.on('connection', (ws) => {
 
       wsSend(ws, { type: 'joined', data: { roomCode: code, role: 'A', state: roomPublicState(room) } });
       broadcastRoom(room);
-      broadcastJoinableRooms();
+      refreshPublicLists();
       return;
     }
 
     if (type === 'join') {
+      removeSpectatorFromRoom(ws);
+      if (ws.__roomCode) {
+        wsSend(ws, { type: 'error', data: { message: 'Already in a room.' } });
+        return;
+      }
       const roomCode = String(data.roomCode || '').trim().toUpperCase();
       const name = String(data.name || 'Player').slice(0, 18);
       if (!roomCode) {
@@ -260,7 +335,41 @@ wss.on('connection', (ws) => {
 
       wsSend(ws, { type: 'joined', data: { roomCode, role, state: roomPublicState(room) } });
       broadcastRoom(room);
-      broadcastJoinableRooms();
+      refreshPublicLists();
+      return;
+    }
+
+    if (type === 'watchRoom') {
+      if (ws.__roomCode) {
+        wsSend(ws, { type: 'error', data: { message: 'Players cannot spectate from the same connection.' } });
+        return;
+      }
+
+      const roomCode = String(data.roomCode || '').trim().toUpperCase();
+      if (!roomCode) {
+        wsSend(ws, { type: 'error', data: { message: 'Room code is required.' } });
+        sendSpectatableRooms(ws);
+        return;
+      }
+
+      const room = rooms.get(roomCode);
+      const watchable = room && (room.status === 'in_round' || room.status === 'between_rounds');
+      if (!watchable) {
+        wsSend(ws, { type: 'error', data: { message: 'Match is no longer available for spectating.' } });
+        sendSpectatableRooms(ws);
+        return;
+      }
+
+      const previousRoom = removeSpectatorFromRoom(ws);
+      if (previousRoom) {
+        broadcastRoom(previousRoom);
+      }
+
+      ws.__spectatingRoomCode = roomCode;
+      room.spectators.add(ws);
+      wsSend(ws, { type: 'spectatorJoined', data: { roomCode, state: roomPublicState(room) } });
+      broadcastRoom(room);
+      sendSpectatableRooms(ws);
       return;
     }
 
@@ -275,7 +384,7 @@ wss.on('connection', (ws) => {
 
       room.players[role].ready = true;
       broadcastRoom(room);
-      broadcastJoinableRooms();
+      refreshPublicLists();
 
       const bothReady = room.players.A?.connected && room.players.B?.connected && room.players.A?.ready && room.players.B?.ready;
       if (bothReady && room.status === 'lobby') {
@@ -315,10 +424,21 @@ wss.on('connection', (ws) => {
       return;
     }
 
+    if (type === 'leaveSpectator') {
+      const room = removeSpectatorFromRoom(ws);
+      if (room) {
+        broadcastRoom(room);
+      }
+      wsSend(ws, { type: 'spectatorLeft', data: {} });
+      sendSpectatableRooms(ws);
+      return;
+    }
+
     if (type === 'leave') {
       removeSocketFromRoom(ws);
       wsSend(ws, { type: 'left', data: {} });
       sendRoomList(ws);
+      sendSpectatableRooms(ws);
       return;
     }
 
@@ -326,6 +446,10 @@ wss.on('connection', (ws) => {
   });
 
   ws.on('close', () => {
+    const room = removeSpectatorFromRoom(ws);
+    if (room) {
+      broadcastRoom(room);
+    }
     removeSocketFromRoom(ws);
   });
 });

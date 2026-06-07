@@ -66,19 +66,27 @@ const btnPvpCreate = document.getElementById('btn-pvp-create');
 const btnPvpJoin = document.getElementById('btn-pvp-join');
 const btnPvpReady = document.getElementById('btn-pvp-ready');
 const btnPvpLeave = document.getElementById('btn-pvp-leave');
+const pvpModeBadge = document.getElementById('pvp-mode-badge');
 const pvpStatus = document.getElementById('pvp-status');
 const pvpRoomLabel = document.getElementById('pvp-room-label');
+const pvpPlayerYouLabel = document.getElementById('pvp-player-you-label');
 const pvpPlayerYou = document.getElementById('pvp-player-you');
 const pvpPlayerYouReady = document.getElementById('pvp-player-you-ready');
+const pvpPlayerOppLabel = document.getElementById('pvp-player-opp-label');
 const pvpPlayerOpp = document.getElementById('pvp-player-opp');
 const pvpPlayerOppReady = document.getElementById('pvp-player-opp-ready');
 const pvpRoundLabel = document.getElementById('pvp-round');
+const pvpScoreYouLabel = document.getElementById('pvp-score-you-label');
 const pvpScoreYou = document.getElementById('pvp-score-you');
+const pvpScoreOppLabel = document.getElementById('pvp-score-opp-label');
 const pvpScoreOpp = document.getElementById('pvp-score-opp');
 const pvpRoundOutcome = document.getElementById('pvp-round-outcome');
 const pvpRoomList = document.getElementById('pvp-room-list');
 const pvpRoomListEmpty = document.getElementById('pvp-room-list-empty');
 const pvpRoomListMeta = document.getElementById('pvp-room-list-meta');
+const pvpSpectatorList = document.getElementById('pvp-spectator-list');
+const pvpSpectatorListEmpty = document.getElementById('pvp-spectator-list-empty');
+const pvpSpectatorListMeta = document.getElementById('pvp-spectator-list-meta');
 
 const safetyTitle = document.getElementById('safety-title');
 const safetyCopy = document.getElementById('safety-copy');
@@ -151,6 +159,8 @@ const pvpRuntime = {
   status: 'idle',
   role: '',
   roomCode: '',
+  watchedRoomCode: '',
+  viewMode: 'none',
   currentRound: 0,
   maxRounds: 3,
   youScore: null,
@@ -249,7 +259,9 @@ function goHome() {
   appState.battleAutoAdvanceToken += 1;
   battleHud.style.display = 'none';
   const pvpSnapshot = pvpClient.getSnapshot();
-  if (pvpSnapshot.roomCode) {
+  if (pvpSnapshot.viewMode === 'spectator') {
+    pvpClient.leaveSpectator();
+  } else if (pvpSnapshot.roomCode) {
     pvpClient.leave();
   }
   resetPvpMatchState('未连接');
@@ -267,6 +279,7 @@ function openPvp() {
   void ensurePvpConnected().then((ok) => {
     if (ok) {
       refreshPvpRoomList();
+      refreshPvpSpectatorList();
       return;
     }
     setPvpOutcome('无法连接服务器');
@@ -285,6 +298,8 @@ function getPvpInputRoomCode() {
 }
 
 function resetPvpMatchState(outcome = '未连接') {
+  pvpRuntime.viewMode = 'none';
+  pvpRuntime.watchedRoomCode = '';
   pvpRuntime.currentRound = 0;
   pvpRuntime.maxRounds = 3;
   pvpRuntime.youScore = null;
@@ -304,6 +319,13 @@ function refreshPvpRoomList() {
   const snapshot = pvpClient.getSnapshot();
   if (snapshot.status === 'connected') {
     pvpClient.listRooms();
+  }
+}
+
+function refreshPvpSpectatorList() {
+  const snapshot = pvpClient.getSnapshot();
+  if (snapshot.status === 'connected') {
+    pvpClient.listSpectatableRooms();
   }
 }
 
@@ -395,6 +417,65 @@ function getPvpSides(snapshot = pvpClient.getSnapshot()) {
   return { room, youRole, oppRole, you, opp };
 }
 
+function getPvpDisplayState(snapshot = pvpClient.getSnapshot()) {
+  const isSpectator = snapshot.viewMode === 'spectator';
+  if (isSpectator) {
+    return {
+      room: snapshot.room,
+      isSpectator: true,
+      primaryRole: 'A',
+      secondaryRole: 'B',
+      primary: snapshot.room?.players?.A || null,
+      secondary: snapshot.room?.players?.B || null,
+    };
+  }
+
+  const { room, youRole, oppRole, you, opp } = getPvpSides(snapshot);
+  return {
+    room,
+    isSpectator: false,
+    primaryRole: youRole,
+    secondaryRole: oppRole,
+    primary: you,
+    secondary: opp,
+  };
+}
+
+function getPvpDisplayRoomCode(snapshot = pvpClient.getSnapshot()) {
+  return snapshot.viewMode === 'spectator' ? snapshot.watchedRoomCode : snapshot.roomCode;
+}
+
+function getPvpRoundPerspective(data, snapshot = pvpClient.getSnapshot()) {
+  const isSpectator = snapshot.viewMode === 'spectator';
+  if (isSpectator) {
+    return {
+      primaryScore: data?.A?.score ?? null,
+      secondaryScore: data?.B?.score ?? null,
+      winner: data?.winner || 'draw',
+    };
+  }
+
+  const role = snapshot.role;
+  return {
+    primaryScore: role === 'A' ? (data?.A?.score ?? null) : (data?.B?.score ?? null),
+    secondaryScore: role === 'A' ? (data?.B?.score ?? null) : (data?.A?.score ?? null),
+    winner: data?.winner || 'draw',
+  };
+}
+
+function getPvpStateChipText(item) {
+  if (item.isSuddenDeath) {
+    return 'SUDDEN DEATH';
+  }
+  if (item.status === 'between_rounds') {
+    return '回合结算';
+  }
+  if (item.status === 'in_round') {
+    return '进行中';
+  }
+  return item.status || '观战中';
+}
+
 function setPvpOutcome(text) {
   pvpRuntime.outcome = text;
   updatePvpUi();
@@ -402,8 +483,12 @@ function setPvpOutcome(text) {
 
 function updatePvpUi() {
   const snapshot = pvpClient.getSnapshot();
-  const { room, youRole, you, opp } = getPvpSides(snapshot);
+  const { room, isSpectator, primaryRole, secondaryRole, primary, secondary } = getPvpDisplayState(snapshot);
   const roomList = Array.isArray(snapshot.roomList) ? snapshot.roomList : [];
+  const spectatableRooms = Array.isArray(snapshot.spectatableRooms) ? snapshot.spectatableRooms : [];
+  const displayRoomCode = getPvpDisplayRoomCode(snapshot);
+  const inPlayerRoom = Boolean(snapshot.roomCode);
+  const inSpectatorRoom = snapshot.viewMode === 'spectator' && Boolean(snapshot.watchedRoomCode);
 
   if (pvpStatus) {
     const statusLabel = snapshot.status === 'connected'
@@ -417,26 +502,44 @@ function updatePvpUi() {
     pvpStatus.textContent = `${statusLabel}${extra}`;
   }
 
-  if (pvpRoomLabel) pvpRoomLabel.textContent = snapshot.roomCode || '--';
+  if (pvpModeBadge) {
+    pvpModeBadge.textContent = isSpectator ? 'SPECTATOR MODE' : 'PLAYER MODE';
+  }
+
+  if (pvpRoomLabel) pvpRoomLabel.textContent = displayRoomCode || '--';
   if (pvpRoomCodeInput && snapshot.roomCode) {
     pvpRoomCodeInput.value = snapshot.roomCode;
   }
-  if (pvpPlayerYou) pvpPlayerYou.textContent = you ? `${you.name} (${youRole || 'YOU'})` : '--';
-  if (pvpPlayerOpp) pvpPlayerOpp.textContent = opp ? opp.name : '--';
-  if (pvpPlayerYouReady) pvpPlayerYouReady.textContent = you ? (you.ready ? 'READY' : 'NOT READY') : '--';
-  if (pvpPlayerOppReady) pvpPlayerOppReady.textContent = !opp ? 'WAITING' : (opp.ready ? 'READY' : 'NOT READY');
+  if (pvpPlayerYouLabel) pvpPlayerYouLabel.textContent = isSpectator ? 'PLAYER A' : 'YOU';
+  if (pvpPlayerOppLabel) pvpPlayerOppLabel.textContent = isSpectator ? 'PLAYER B' : 'OPPONENT';
+  if (pvpPlayerYou) pvpPlayerYou.textContent = primary ? `${primary.name}${isSpectator ? '' : ` (${primaryRole || 'YOU'})`}` : '--';
+  if (pvpPlayerOpp) pvpPlayerOpp.textContent = secondary ? `${secondary.name}${isSpectator && secondaryRole ? ` (${secondaryRole})` : ''}` : '--';
+  if (pvpPlayerYouReady) {
+    pvpPlayerYouReady.textContent = isSpectator
+      ? (primary ? (primary.connected ? 'ONLINE' : 'OFFLINE') : '--')
+      : (primary ? (primary.ready ? 'READY' : 'NOT READY') : '--');
+  }
+  if (pvpPlayerOppReady) {
+    pvpPlayerOppReady.textContent = isSpectator
+      ? (!secondary ? 'WAITING' : (secondary.connected ? 'ONLINE' : 'OFFLINE'))
+      : (!secondary ? 'WAITING' : (secondary.ready ? 'READY' : 'NOT READY'));
+  }
+  if (pvpScoreYouLabel) pvpScoreYouLabel.textContent = isSpectator ? 'A 本回合' : '你本回合';
+  if (pvpScoreOppLabel) pvpScoreOppLabel.textContent = isSpectator ? 'B 本回合' : '对手本回合';
   if (pvpRoundLabel) pvpRoundLabel.textContent = getPvpRoundHudLabel(pvpRuntime.currentRound);
   if (pvpScoreYou) pvpScoreYou.textContent = pvpRuntime.youScore == null ? '-' : String(pvpRuntime.youScore);
   if (pvpScoreOpp) pvpScoreOpp.textContent = pvpRuntime.oppScore == null ? '-' : String(pvpRuntime.oppScore);
   if (pvpRoundOutcome) pvpRoundOutcome.textContent = pvpRuntime.outcome || '';
 
-  const inRoom = Boolean(snapshot.roomCode);
   const roomOpen = room?.status === 'lobby';
-  const youReady = Boolean(you?.ready);
-  if (btnPvpCreate) btnPvpCreate.disabled = inRoom;
-  if (btnPvpJoin) btnPvpJoin.disabled = inRoom;
-  if (btnPvpReady) btnPvpReady.disabled = snapshot.status !== 'connected' || !inRoom || !roomOpen || youReady;
-  if (btnPvpLeave) btnPvpLeave.disabled = snapshot.status !== 'connected' || !inRoom;
+  const youReady = Boolean(primary?.ready);
+  if (btnPvpCreate) btnPvpCreate.disabled = inPlayerRoom || inSpectatorRoom;
+  if (btnPvpJoin) btnPvpJoin.disabled = inPlayerRoom || inSpectatorRoom;
+  if (btnPvpReady) btnPvpReady.disabled = snapshot.status !== 'connected' || isSpectator || !inPlayerRoom || !roomOpen || youReady;
+  if (btnPvpLeave) {
+    btnPvpLeave.disabled = snapshot.status !== 'connected' || (!inPlayerRoom && !inSpectatorRoom);
+    btnPvpLeave.textContent = isSpectator ? '退出观战' : '离开房间';
+  }
 
   if (pvpRoomListMeta) {
     if (snapshot.status !== 'connected') {
@@ -461,7 +564,7 @@ function updatePvpUi() {
       const roomCard = document.createElement('button');
       roomCard.type = 'button';
       roomCard.className = 'pvp-room-card';
-      roomCard.disabled = snapshot.status !== 'connected' || inRoom;
+      roomCard.disabled = snapshot.status !== 'connected' || inPlayerRoom || inSpectatorRoom;
       roomCard.innerHTML = `
         <div class="pvp-room-card-code">${escapeHtml(item.roomCode)}</div>
         <div>${escapeHtml(item.hostName)}</div>
@@ -476,26 +579,86 @@ function updatePvpUi() {
       pvpRoomList.appendChild(roomCard);
     });
   }
+
+  if (pvpSpectatorListMeta) {
+    if (snapshot.status !== 'connected') {
+      pvpSpectatorListMeta.textContent = '连接服务器后显示';
+    } else if (spectatableRooms.length) {
+      pvpSpectatorListMeta.textContent = `当前 ${spectatableRooms.length} 场可观战比赛`;
+    } else {
+      pvpSpectatorListMeta.textContent = '当前暂无可观战比赛';
+    }
+  }
+
+  if (pvpSpectatorListEmpty) {
+    pvpSpectatorListEmpty.textContent = snapshot.status === 'connected'
+      ? '当前暂无可观战比赛。'
+      : '连接服务器后即可查看可观战比赛。';
+    pvpSpectatorListEmpty.style.display = spectatableRooms.length ? 'none' : 'block';
+  }
+
+  if (pvpSpectatorList) {
+    pvpSpectatorList.innerHTML = '';
+    spectatableRooms.forEach((item) => {
+      const spectatorCard = document.createElement('button');
+      spectatorCard.type = 'button';
+      spectatorCard.className = 'pvp-spectator-card';
+      spectatorCard.disabled = snapshot.status !== 'connected' || inPlayerRoom;
+      spectatorCard.innerHTML = `
+        <div class="pvp-spectator-head">
+          <div class="pvp-spectator-matchup">${escapeHtml(item.playerAName)} VS ${escapeHtml(item.playerBName)}</div>
+          <span class="pvp-state-chip">${escapeHtml(getPvpStateChipText(item))}</span>
+        </div>
+        <div class="pvp-room-card-code">${escapeHtml(item.roomCode)}</div>
+        <div class="pvp-room-card-meta">${escapeHtml(getPvpRoundLabel(item.round))} · 胜场 ${escapeHtml(String(item.wins.A))} : ${escapeHtml(String(item.wins.B))}</div>
+      `;
+      spectatorCard.addEventListener('click', () => {
+        if (spectatorCard.disabled) {
+          return;
+        }
+        pvpClient.watchRoom(item.roomCode);
+        setPvpOutcome('正在进入观战...');
+      });
+      pvpSpectatorList.appendChild(spectatorCard);
+    });
+  }
 }
 
 function handlePvpStatus(snapshot) {
   pvpRuntime.status = snapshot.status;
   pvpRuntime.role = snapshot.role;
   pvpRuntime.roomCode = snapshot.roomCode;
-  const { you, opp } = getPvpSides(snapshot);
-  if (you?.name) pvpRuntime.playerName = you.name;
-  if (opp?.name) pvpRuntime.opponentName = opp.name;
+  pvpRuntime.viewMode = snapshot.viewMode || 'none';
+  pvpRuntime.watchedRoomCode = snapshot.watchedRoomCode || '';
+  const isSpectator = snapshot.viewMode === 'spectator';
+  const { primary, secondary } = getPvpDisplayState(snapshot);
+  if (primary?.name) pvpRuntime.playerName = primary.name;
+  if (secondary?.name) pvpRuntime.opponentName = secondary.name;
   if (snapshot.room?.maxRounds) pvpRuntime.maxRounds = snapshot.room.maxRounds;
   if (snapshot.room?.round) pvpRuntime.currentRound = snapshot.room.round;
   if (snapshot.room?.wins) {
     const wins = snapshot.room.wins;
-    if (snapshot.role === 'A') {
+    if (isSpectator) {
+      pvpRuntime.winsYou = wins.A ?? 0;
+      pvpRuntime.winsOpp = wins.B ?? 0;
+    } else if (snapshot.role === 'A') {
       pvpRuntime.winsYou = wins.A ?? 0;
       pvpRuntime.winsOpp = wins.B ?? 0;
     } else if (snapshot.role === 'B') {
       pvpRuntime.winsYou = wins.B ?? 0;
       pvpRuntime.winsOpp = wins.A ?? 0;
     }
+  }
+  if (Array.isArray(snapshot.room?.results)) {
+    pvpRuntime.history = snapshot.room.results.map((item) => {
+      const perspective = getPvpRoundPerspective(item, snapshot);
+      return {
+        round: Number.parseInt(item.round, 10) || 0,
+        youScore: perspective.primaryScore ?? 0,
+        oppScore: perspective.secondaryScore ?? 0,
+        winner: item.winner || 'draw',
+      };
+    });
   }
   if (snapshot.lastError) pvpRuntime.outcome = snapshot.lastError;
   updatePvpUi();
@@ -507,14 +670,27 @@ function handlePvpEvent(event) {
   const data = event.data || {};
 
   if (type === 'joined') {
+    resetPvpMatchState('已加入房间，等待开始...');
     if (pvpRoomCodeInput && data?.roomCode) {
       pvpRoomCodeInput.value = String(data.roomCode);
     }
     refreshPvpRoomList();
+    refreshPvpSpectatorList();
+    return;
+  }
+
+  if (type === 'spectatorJoined') {
+    resetPvpMatchState('已进入观战，等待比赛推进...');
+    pvpRuntime.viewMode = 'spectator';
+    pvpRuntime.watchedRoomCode = String(data?.roomCode || '');
+    refreshPvpSpectatorList();
+    showScreen('pvp');
+    updatePvpUi();
     return;
   }
 
   if (type === 'startRound') {
+    const snapshot = pvpClient.getSnapshot();
     const round = Number.parseInt(data.round, 10);
     pvpRuntime.currentRound = Number.isFinite(round) ? round : pvpRuntime.currentRound;
     pvpRuntime.youScore = null;
@@ -525,6 +701,11 @@ function handlePvpEvent(event) {
       setPvpOutcome(`Sudden Death starts now · 第 ${pvpRuntime.currentRound} 回合`);
     } else {
       setPvpOutcome(`Round ${pvpRuntime.currentRound} 开始，准备出拳`);
+    }
+    refreshPvpSpectatorList();
+    if (snapshot.viewMode === 'spectator') {
+      showScreen('pvp');
+      return;
     }
     void startCountdown(MODE_PVP);
     return;
@@ -539,13 +720,19 @@ function handlePvpEvent(event) {
   if (type === 'roundResult') {
     const snapshot = pvpClient.getSnapshot();
     const role = snapshot.role;
-    const youScore = role === 'A' ? data?.A?.score : data?.B?.score;
-    const oppScore = role === 'A' ? data?.B?.score : data?.A?.score;
-    pvpRuntime.youScore = youScore ?? null;
-    pvpRuntime.oppScore = oppScore ?? null;
-    pvpRuntime.winner = data?.winner || null;
-    if (data?.winner === role) pvpRuntime.winsYou += 1;
-    else if (data?.winner && data.winner !== 'draw') pvpRuntime.winsOpp += 1;
+    const perspective = getPvpRoundPerspective(data, snapshot);
+    const isSpectator = snapshot.viewMode === 'spectator';
+    pvpRuntime.youScore = perspective.primaryScore ?? null;
+    pvpRuntime.oppScore = perspective.secondaryScore ?? null;
+    pvpRuntime.winner = perspective.winner || null;
+    if (isSpectator) {
+      if (data?.winner === 'A') pvpRuntime.winsYou += 1;
+      else if (data?.winner === 'B') pvpRuntime.winsOpp += 1;
+    } else if (data?.winner === role) {
+      pvpRuntime.winsYou += 1;
+    } else if (data?.winner && data.winner !== 'draw') {
+      pvpRuntime.winsOpp += 1;
+    }
 
     const roundSummary = {
       round: Number.parseInt(data.round, 10) || pvpRuntime.currentRound,
@@ -556,10 +743,19 @@ function handlePvpEvent(event) {
     pvpRuntime.history.push(roundSummary);
     if (data?.winner === 'draw') {
       setPvpOutcome(`Round ${roundSummary.round} 平局 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    } else if (isSpectator && data?.winner === 'A') {
+      setPvpOutcome(`Round ${roundSummary.round} · ${pvpRuntime.playerName} 胜出 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    } else if (isSpectator && data?.winner === 'B') {
+      setPvpOutcome(`Round ${roundSummary.round} · ${pvpRuntime.opponentName} 胜出 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
     } else if (data?.winner === role) {
       setPvpOutcome(`Round ${roundSummary.round} 你赢了 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
     } else {
       setPvpOutcome(`Round ${roundSummary.round} 你输了 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    }
+    refreshPvpSpectatorList();
+    if (isSpectator) {
+      showScreen('pvp');
+      return;
     }
     void showPvpBattleStatus(roundSummary);
     return;
@@ -568,12 +764,20 @@ function handlePvpEvent(event) {
   if (type === 'matchResult') {
     const snapshot = pvpClient.getSnapshot();
     const role = snapshot.role;
+    const isSpectator = snapshot.viewMode === 'spectator';
     const winner = data?.winner || 'draw';
     pvpRuntime.finalResult = data;
     pvpRuntime.winner = winner;
     if (winner === 'draw') setPvpOutcome('比赛结束：平局');
+    else if (isSpectator && winner === 'A') setPvpOutcome(`比赛结束：${pvpRuntime.playerName} 获胜`);
+    else if (isSpectator && winner === 'B') setPvpOutcome(`比赛结束：${pvpRuntime.opponentName} 获胜`);
     else if (winner === role) setPvpOutcome('比赛结束：你获胜');
     else setPvpOutcome('比赛结束：你落败');
+    refreshPvpSpectatorList();
+    if (isSpectator) {
+      showScreen('pvp');
+      return;
+    }
     if (!pvpRuntime.isStatusAnimating) {
       showPvpBattleResult();
     }
@@ -586,6 +790,15 @@ function handlePvpEvent(event) {
       pvpRoomCodeInput.value = '';
     }
     refreshPvpRoomList();
+    refreshPvpSpectatorList();
+    updatePvpUi();
+    return;
+  }
+
+  if (type === 'spectatorLeft') {
+    resetPvpMatchState('已退出观战');
+    refreshPvpSpectatorList();
+    showScreen('pvp');
     updatePvpUi();
     return;
   }
@@ -593,15 +806,21 @@ function handlePvpEvent(event) {
   if (type === 'opponentLeft') {
     resetPvpMatchState('对手已离开房间');
     refreshPvpRoomList();
+    refreshPvpSpectatorList();
+    showScreen('pvp');
+    return;
+  }
+
+  if (type === 'matchInterrupted') {
+    resetPvpMatchState(data?.message || '比赛中断');
+    refreshPvpSpectatorList();
     showScreen('pvp');
     return;
   }
 
   if (type === 'error') {
-    const snapshot = pvpClient.getSnapshot();
-    if (!snapshot.roomCode) {
-      refreshPvpRoomList();
-    }
+    refreshPvpRoomList();
+    refreshPvpSpectatorList();
   }
 }
 
@@ -1443,6 +1662,7 @@ if (btnPvpCreate) {
     pvpClient.createRoom(getPvpInputName());
     setPvpOutcome('已创建房间，等待对手加入...');
     refreshPvpRoomList();
+    refreshPvpSpectatorList();
   });
 }
 
@@ -1460,8 +1680,14 @@ if (btnPvpReady) {
 
 if (btnPvpLeave) {
   btnPvpLeave.addEventListener('click', () => {
-    pvpClient.leave();
+    const snapshot = pvpClient.getSnapshot();
+    if (snapshot.viewMode === 'spectator') {
+      pvpClient.leaveSpectator();
+    } else {
+      pvpClient.leave();
+    }
     refreshPvpRoomList();
+    refreshPvpSpectatorList();
   });
 }
 

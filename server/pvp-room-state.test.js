@@ -4,6 +4,7 @@ import {
   createRoomState,
   createRoomSummary,
   getJoinableRooms,
+  getSpectatableRooms,
   resolveMatchProgress,
 } from './pvp-room-state.js';
 
@@ -32,6 +33,12 @@ test('createRoomSummary falls back to the connected player when host disconnects
   });
 });
 
+test('createRoomState initializes an empty spectator socket set', () => {
+  const room = createRoomState('ABCD12', 'Host');
+  assert.ok(room.spectators instanceof Set);
+  assert.equal(room.spectators.size, 0);
+});
+
 test('getJoinableRooms excludes full and in-progress rooms', () => {
   const lobbyRoom = createRoomState('OPEN01', 'Alice');
   const fullRoom = createRoomState('FULL01', 'Bob');
@@ -54,6 +61,75 @@ test('getJoinableRooms excludes full and in-progress rooms', () => {
       playerCount: 1,
       maxPlayers: 2,
       status: 'lobby',
+    },
+  ]);
+});
+
+test('getSpectatableRooms returns only active rooms with both player names', () => {
+  const liveRoom = createRoomState('LIVE01', 'Alice');
+  liveRoom.players.B = { name: 'Bob', ready: true, connected: true };
+  liveRoom.status = 'in_round';
+  liveRoom.round = 2;
+  liveRoom.wins = { A: 1, B: 0 };
+
+  const settleRoom = createRoomState('LIVE02', 'Cara');
+  settleRoom.players.B = { name: 'Duke', ready: true, connected: true };
+  settleRoom.status = 'between_rounds';
+  settleRoom.round = 3;
+  settleRoom.wins = { A: 1, B: 1 };
+
+  const lobbyRoom = createRoomState('OPEN01', 'Host');
+  lobbyRoom.players.B = { name: 'Guest', ready: false, connected: true };
+
+  const rooms = new Map([
+    [liveRoom.code, liveRoom],
+    [settleRoom.code, settleRoom],
+    [lobbyRoom.code, lobbyRoom],
+  ]);
+
+  assert.deepEqual(getSpectatableRooms(rooms), [
+    {
+      roomCode: 'LIVE01',
+      playerAName: 'Alice',
+      playerBName: 'Bob',
+      round: 2,
+      maxRounds: 3,
+      wins: { A: 1, B: 0 },
+      status: 'in_round',
+      isSuddenDeath: false,
+    },
+    {
+      roomCode: 'LIVE02',
+      playerAName: 'Cara',
+      playerBName: 'Duke',
+      round: 3,
+      maxRounds: 3,
+      wins: { A: 1, B: 1 },
+      status: 'between_rounds',
+      isSuddenDeath: false,
+    },
+  ]);
+});
+
+test('getSpectatableRooms marks sudden death rooms in the summary', () => {
+  const room = createRoomState('OT0001', 'Alice');
+  room.players.B = { name: 'Bob', ready: true, connected: true };
+  room.status = 'between_rounds';
+  room.round = 4;
+  room.wins = { A: 1, B: 1 };
+
+  const rooms = new Map([[room.code, room]]);
+
+  assert.deepEqual(getSpectatableRooms(rooms), [
+    {
+      roomCode: 'OT0001',
+      playerAName: 'Alice',
+      playerBName: 'Bob',
+      round: 4,
+      maxRounds: 3,
+      wins: { A: 1, B: 1 },
+      status: 'between_rounds',
+      isSuddenDeath: true,
     },
   ]);
 });
