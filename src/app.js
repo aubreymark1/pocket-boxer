@@ -62,7 +62,11 @@ const resDamage = document.getElementById('res-damage');
 const resRating = document.getElementById('res-rating');
 const resTitle = document.getElementById('res-title');
 const resCopy = document.getElementById('res-copy');
+const resTier = document.getElementById('res-tier');
+const resMeterLabel = document.getElementById('res-meter-label');
+const resMeterFill = document.getElementById('res-meter-fill');
 const bagResult = document.getElementById('bag-result');
+const punchStage = document.getElementById('punch-stage');
 
 const battleHud = document.getElementById('battle-hud');
 const battleRound = document.getElementById('battle-round');
@@ -76,9 +80,13 @@ const battleStatusRobotHp = document.getElementById('battle-status-robot-hp');
 const battleArena = document.getElementById('battle-arena');
 const fighterPlayer = document.getElementById('fighter-player');
 const fighterRobot = document.getElementById('fighter-robot');
+const battleChallengeCore = document.getElementById('battle-challenge-core');
 const battlePopupPlayer = document.getElementById('battle-popup-player');
 const battlePopupRobot = document.getElementById('battle-popup-robot');
+const battleResultScreen = document.getElementById('screen-battle-result');
+const battleResultKicker = document.getElementById('battle-result-kicker');
 const battleResultTitle = document.getElementById('battle-result-title');
+const battleResultDefeated = document.getElementById('battle-result-defeated');
 const battleResultCopy = document.getElementById('battle-result-copy');
 const battleFinalPlayerHp = document.getElementById('battle-final-player-hp');
 const battleFinalRobotHp = document.getElementById('battle-final-robot-hp');
@@ -276,6 +284,10 @@ function refreshBattleChallengeUi() {
     fighterRobotLabel.textContent = narrative.fighterRobotLabel;
   }
 
+  if (battleChallengeCore) {
+    battleChallengeCore.textContent = narrative.shortName.toUpperCase();
+  }
+
   if (battleStatusRobotLabel) {
     battleStatusRobotLabel.textContent = narrative.resultRobotLabel;
   }
@@ -298,7 +310,8 @@ function getScoreMeta(score) {
     return {
       rating: '轻轻一碰',
       subtitle: '试探新手',
-      comment: '这一拳像是在拍蚊子',
+      vibe: '试探级压迫',
+      tier: 'C',
     };
   }
 
@@ -306,7 +319,8 @@ function getScoreMeta(score) {
     return {
       rating: '普通直拳',
       subtitle: '稳定出拳手',
-      comment: '有点力量，但还不够狠',
+      vibe: '蓄势待发',
+      tier: 'B',
     };
   }
 
@@ -314,7 +328,8 @@ function getScoreMeta(score) {
     return {
       rating: '重拳出击',
       subtitle: '擂台压迫者',
-      comment: '这一拳已经有压迫感了',
+      vibe: '压场成功',
+      tier: 'A',
     };
   }
 
@@ -322,14 +337,16 @@ function getScoreMeta(score) {
     return {
       rating: '爆裂一击',
       subtitle: '校园拳王',
-      comment: '机器人开始后退',
+      vibe: '全场沸腾',
+      tier: 'S',
     };
   }
 
   return {
     rating: '拳王降临',
     subtitle: '赛博拳王',
-    comment: '这一拳打穿了空气',
+    vibe: '空气撕裂级',
+    tier: 'SS',
   };
 }
 
@@ -439,6 +456,12 @@ async function startPunch(context) {
     bagPunch.style.transition = 'none';
   }
 
+  if (punchStage) {
+    punchStage.classList.remove('is-cueing');
+    void punchStage.offsetWidth;
+    punchStage.classList.add('is-cueing');
+  }
+
   if (context === MODE_BATTLE) {
     const narrative = getBattleNarrative();
     punchInstruction.textContent = narrative.punchInstruction;
@@ -479,7 +502,12 @@ function showModeOneResult(rawResult) {
   resDamage.textContent = String(result.damage);
   resRating.textContent = meta.rating;
   resTitle.textContent = meta.subtitle;
-  resCopy.textContent = meta.comment;
+  resCopy.textContent = meta.vibe;
+  resTier.textContent = meta.tier;
+  resMeterLabel.textContent = `${result.score} / 100`;
+  resMeterFill.style.width = `${result.score}%`;
+  resTier.className = `result-rank-tier is-${String(meta.tier).toLowerCase()}`;
+  resMeterFill.className = `result-meter-fill is-${String(meta.tier).toLowerCase()}`;
 
   if (result.score >= 91) {
     resDamage.style.color = 'var(--accent-good)';
@@ -496,18 +524,20 @@ function showModeOneResult(rawResult) {
 }
 
 function resetBattlePlaybackUi() {
-  [battleArena, fighterPlayer, fighterRobot, battlePopupPlayer, battlePopupRobot].forEach((element) => {
+  [battleArena, fighterPlayer, fighterRobot, battlePopupPlayer, battlePopupRobot, battleChallengeCore].forEach((element) => {
     if (!element) {
       return;
     }
     element.classList.remove(
       'is-impact',
+      'is-finish-impact',
       'is-player-strike',
       'is-robot-strike',
       'is-attacking',
       'is-countering',
       'is-hit',
       'is-active',
+      'is-shattering',
     );
   });
 }
@@ -518,7 +548,8 @@ function wait(ms) {
   });
 }
 
-async function playBattleStatusAnimation(roundSummary) {
+async function playBattleStatusAnimation(snapshot) {
+  const { roundSummary, battleFinished, winner } = snapshot;
   const narrative = getBattleNarrative();
   resetBattlePlaybackUi();
   battlePopupRobot.textContent = `-${roundSummary.playerDamage}`;
@@ -534,6 +565,20 @@ async function playBattleStatusAnimation(roundSummary) {
   feedbackModule.hit(roundSummary.score);
   await wait(560);
 
+  if (battleFinished && winner === 'win') {
+    resetBattlePlaybackUi();
+    battleStatusPhase.textContent = `终结一击！「${narrative.displayName}」正在被粉碎`;
+    battleArena.classList.add('is-finish-impact');
+    fighterRobot.classList.add('is-hit');
+    fighterRobot.classList.add('is-shattering');
+    if (battleChallengeCore) {
+      battleChallengeCore.classList.add('is-shattering');
+    }
+    feedbackModule.victory();
+    await wait(980);
+    return;
+  }
+
   resetBattlePlaybackUi();
   battleStatusPhase.textContent = narrative.robotCounterPhase;
   battleArena.classList.add('is-robot-strike');
@@ -546,6 +591,13 @@ async function playBattleStatusAnimation(roundSummary) {
   await wait(620);
 
   resetBattlePlaybackUi();
+  if (battleFinished) {
+    battleStatusPhase.textContent = winner === 'lose'
+      ? `「${narrative.displayName}」压住了你的节奏，正在结算结果...`
+      : `你和「${narrative.displayName}」打满全场，正在结算结果...`;
+    return;
+  }
+
   battleStatusPhase.textContent = narrative.statusPhaseDone;
 }
 
@@ -554,22 +606,29 @@ async function showBattleStatus(snapshot) {
   const autoAdvanceToken = ++appState.battleAutoAdvanceToken;
   const narrative = getBattleNarrative();
   battleStatusTitle.textContent = `Round ${roundSummary.round} 结束`;
-  battleStatusCopy.textContent = narrative.statusCopy(roundSummary);
+  battleStatusCopy.textContent = battleFinished && snapshot.winner === 'win'
+    ? `你的出拳指数：${roundSummary.score}。你对「${narrative.displayName}」造成了 ${roundSummary.playerDamage} 点终结伤害，这一拳直接把它的防线打到粉碎。`
+    : narrative.statusCopy(roundSummary);
   battleStatusPlayerHp.textContent = String(roundSummary.playerHp);
   battleStatusRobotHp.textContent = String(roundSummary.robotHp);
-  btnBattleNext.textContent = battleFinished ? '查看战斗结果' : `进入 Round ${snapshot.currentRound}`;
   btnBattleNext.disabled = true;
-  btnBattleNext.style.display = battleFinished ? 'block' : 'none';
+  btnBattleNext.style.display = 'none';
   showScreen('battleStatus');
-  await playBattleStatusAnimation(roundSummary);
+  await playBattleStatusAnimation(snapshot);
 
   if (autoAdvanceToken !== appState.battleAutoAdvanceToken) {
     return;
   }
 
   if (battleFinished) {
-    battleStatusPhase.textContent = `「${narrative.displayName}」挑战结束，查看结果`;
-    btnBattleNext.disabled = false;
+    battleStatusPhase.textContent = winnerMessageForAutoResult(snapshot, narrative.displayName);
+    await wait(720);
+
+    if (autoAdvanceToken !== appState.battleAutoAdvanceToken) {
+      return;
+    }
+
+    showBattleResult(snapshot);
     return;
   }
 
@@ -588,26 +647,62 @@ function showBattleResult(snapshot) {
   const winnerMap = {
     win: {
       title: 'Win!',
+      kicker: 'FINISHER',
       copy: narrative.winCopy,
+      defeatedLabel: `「${narrative.displayName}」已粉碎`,
     },
     lose: {
       title: 'Lose!',
+      kicker: 'SYSTEM REPLAY',
       copy: narrative.loseCopy,
+      defeatedLabel: `「${narrative.displayName}」本回合占优`,
     },
     draw: {
       title: 'Draw!',
+      kicker: 'LAST EXCHANGE',
       copy: narrative.drawCopy,
+      defeatedLabel: `你与「${narrative.displayName}」僵持收场`,
     },
   };
 
   const winnerCopy = winnerMap[snapshot.winner] || winnerMap.draw;
+  if (battleResultScreen) {
+    battleResultScreen.classList.remove('is-revealing', 'is-win', 'is-lose', 'is-draw');
+    void battleResultScreen.offsetWidth;
+    battleResultScreen.classList.add('is-revealing', `is-${snapshot.winner || 'draw'}`);
+  }
+
+  if (snapshot.winner === 'lose') {
+    feedbackModule.defeat();
+  } else if (snapshot.winner === 'draw') {
+    feedbackModule.softPulse();
+  }
+
+  if (battleResultKicker) {
+    battleResultKicker.textContent = winnerCopy.kicker;
+  }
   battleResultTitle.textContent = winnerCopy.title;
+  if (battleResultDefeated) {
+    battleResultDefeated.textContent = winnerCopy.defeatedLabel;
+  }
   battleResultCopy.textContent = winnerCopy.copy;
   battleFinalPlayerHp.textContent = String(snapshot.playerHp);
   battleFinalRobotHp.textContent = String(snapshot.robotHp);
   battleFinalDamage.textContent = String(snapshot.totalDamage);
   battleFinalScore.textContent = String(snapshot.highestScore);
   showScreen('battleResult');
+}
+
+function winnerMessageForAutoResult(snapshot, displayName) {
+  if (snapshot.winner === 'win') {
+    return `「${displayName}」已被彻底击碎，战斗结果正在展开...`;
+  }
+
+  if (snapshot.winner === 'lose') {
+    return `「${displayName}」暂时赢下这一场，战斗结果正在展开...`;
+  }
+
+  return `你和「${displayName}」势均力敌，战斗结果正在展开...`;
 }
 
 function handleBattlePunch(rawResult) {
@@ -685,18 +780,9 @@ btnBattleStart.addEventListener('click', startBattleFlow);
 btnBattlePrepHome.addEventListener('click', goHome);
 btnBattleNext.addEventListener('click', () => {
   const snapshot = battleController.getSnapshot();
-  if (snapshot.status === 'finished') {
-    if (snapshot.winner === 'win') {
-      feedbackModule.victory();
-    } else if (snapshot.winner === 'lose') {
-      feedbackModule.defeat();
-    } else {
-      feedbackModule.softPulse();
-    }
-    showBattleResult(snapshot);
-    return;
+  if (snapshot.status !== 'finished') {
+    proceedBattleRound();
   }
-  proceedBattleRound();
 });
 btnBattleStatusHome.addEventListener('click', goHome);
 btnBattleRestart.addEventListener('click', startBattleFlow);
