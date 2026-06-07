@@ -1,8 +1,14 @@
 import http from 'node:http';
 import { WebSocketServer } from 'ws';
+import {
+  createRoomState,
+  getJoinableRooms,
+  resolveMatchProgress,
+} from './pvp-room-state.js';
 
 const HOST = process.env.HOST || '0.0.0.0';
 const PORT = Number.parseInt(process.env.PORT || '8787', 10);
+const BETWEEN_ROUNDS_MS = 4200;
 
 function clampScore(value) {
   const v = Number.isFinite(value) ? value : 0;
@@ -11,12 +17,6 @@ function clampScore(value) {
 
 function generateRoomCode() {
   return Math.random().toString(36).slice(2, 8).toUpperCase();
-}
-
-function getMatchWinner(winsA, winsB) {
-  if (winsA > winsB) return 'A';
-  if (winsB > winsA) return 'B';
-  return 'draw';
 }
 
 function safeJsonParse(value) {
@@ -50,10 +50,31 @@ function roomPublicState(room) {
 }
 
 const rooms = new Map();
+let wss;
 
 function broadcastRoom(room) {
   const payload = { type: 'room', data: roomPublicState(room) };
   for (const ws of room.sockets) {
+    wsSend(ws, payload);
+  }
+}
+
+function joinableRoomsPayload() {
+  return {
+    type: 'roomList',
+    data: getJoinableRooms(rooms),
+  };
+}
+
+function sendRoomList(ws) {
+  wsSend(ws, joinableRoomsPayload());
+}
+
+function broadcastJoinableRooms() {
+  if (!wss) return;
+
+  const payload = joinableRoomsPayload();
+  for (const ws of wss.clients) {
     wsSend(ws, payload);
   }
 }
@@ -71,6 +92,7 @@ function startRound(room, round) {
     wsSend(ws, msg);
   }
   broadcastRoom(room);
+  broadcastJoinableRooms();
 }
 
 function tryResolveRound(room) {
@@ -92,26 +114,44 @@ function tryResolveRound(room) {
     wsSend(ws, msg);
   }
 
-  if (room.round >= room.maxRounds) {
+  const progress = resolveMatchProgress({
+    round: room.round,
+    maxRounds: room.maxRounds,
+    wins: room.wins,
+    roundWinner: winner,
+  });
+
+  if (progress.battleFinished) {
     room.status = 'finished';
-    const matchWinner = getMatchWinner(room.wins.A, room.wins.B);
-    const endMsg = { type: 'matchResult', data: { winner: matchWinner, wins: { ...room.wins }, results: room.results.map((x) => ({ ...x })) } };
+    const endMsg = {
+      type: 'matchResult',
+      data: {
+        winner: progress.matchWinner,
+        wins: { ...room.wins },
+        results: room.results.map((x) => ({ ...x })),
+      },
+    };
     for (const ws of room.sockets) {
       wsSend(ws, endMsg);
     }
     broadcastRoom(room);
+    broadcastJoinableRooms();
     return;
   }
 
   room.status = 'between_rounds';
   broadcastRoom(room);
-  setTimeout(() => startRound(room, room.round + 1), 1200);
+  broadcastJoinableRooms();
+  setTimeout(() => startRound(room, progress.nextRound), BETWEEN_ROUNDS_MS);
 }
 
 function removeSocketFromRoom(ws) {
   const roomCode = ws.__roomCode;
   const role = ws.__role;
   if (!roomCode || !role) return;
+
+  ws.__roomCode = null;
+  ws.__role = null;
 
   const room = rooms.get(roomCode);
   if (!room) return;
@@ -128,10 +168,12 @@ function removeSocketFromRoom(ws) {
 
   if (room.sockets.size === 0) {
     rooms.delete(roomCode);
+    broadcastJoinableRooms();
     return;
   }
 
   broadcastRoom(room);
+  broadcastJoinableRooms();
 }
 
 const server = http.createServer((req, res) => {
@@ -145,7 +187,7 @@ const server = http.createServer((req, res) => {
   res.end('Pocket Boxer PVP WebSocket server\n');
 });
 
-const wss = new WebSocketServer({ server });
+wss = new WebSocketServer({ server });
 
 wss.on('connection', (ws) => {
   ws.__roomCode = null;
@@ -161,25 +203,17 @@ wss.on('connection', (ws) => {
     const type = String(message.type || '');
     const data = message.data && typeof message.data === 'object' ? message.data : {};
 
+    if (type === 'listRooms') {
+      sendRoomList(ws);
+      return;
+    }
+
     if (type === 'create') {
       const name = String(data.name || 'Player').slice(0, 18);
       let code = generateRoomCode();
       while (rooms.has(code)) code = generateRoomCode();
 
-      const room = {
-        code,
-        createdAt: Date.now(),
-        status: 'lobby',
-        round: 0,
-        maxRounds: 3,
-        wins: { A: 0, B: 0 },
-        results: [],
-        punches: { A: null, B: null },
-        players: { A: null, B: null },
-        sockets: new Set(),
-      };
-
-      room.players.A = { name, ready: false, connected: true };
+      const room = createRoomState(code, name);
       room.sockets.add(ws);
       rooms.set(code, room);
 
@@ -188,6 +222,7 @@ wss.on('connection', (ws) => {
 
       wsSend(ws, { type: 'joined', data: { roomCode: code, role: 'A', state: roomPublicState(room) } });
       broadcastRoom(room);
+      broadcastJoinableRooms();
       return;
     }
 
@@ -196,17 +231,25 @@ wss.on('connection', (ws) => {
       const name = String(data.name || 'Player').slice(0, 18);
       if (!roomCode) {
         wsSend(ws, { type: 'error', data: { message: 'Room code is required.' } });
+        sendRoomList(ws);
         return;
       }
       const room = rooms.get(roomCode);
       if (!room) {
         wsSend(ws, { type: 'error', data: { message: 'Room not found.' } });
+        sendRoomList(ws);
+        return;
+      }
+      if (room.status !== 'lobby') {
+        wsSend(ws, { type: 'error', data: { message: 'Room is no longer joinable.' } });
+        sendRoomList(ws);
         return;
       }
 
       const role = room.players.A && room.players.A.connected ? (!room.players.B || !room.players.B.connected ? 'B' : null) : 'A';
       if (!role) {
         wsSend(ws, { type: 'error', data: { message: 'Room is full.' } });
+        sendRoomList(ws);
         return;
       }
 
@@ -217,6 +260,7 @@ wss.on('connection', (ws) => {
 
       wsSend(ws, { type: 'joined', data: { roomCode, role, state: roomPublicState(room) } });
       broadcastRoom(room);
+      broadcastJoinableRooms();
       return;
     }
 
@@ -231,6 +275,7 @@ wss.on('connection', (ws) => {
 
       room.players[role].ready = true;
       broadcastRoom(room);
+      broadcastJoinableRooms();
 
       const bothReady = room.players.A?.connected && room.players.B?.connected && room.players.A?.ready && room.players.B?.ready;
       if (bothReady && room.status === 'lobby') {
@@ -273,6 +318,7 @@ wss.on('connection', (ws) => {
     if (type === 'leave') {
       removeSocketFromRoom(ws);
       wsSend(ws, { type: 'left', data: {} });
+      sendRoomList(ws);
       return;
     }
 

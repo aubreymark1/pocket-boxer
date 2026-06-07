@@ -965,6 +965,73 @@ button {
   border: none;
 }
 
+.pvp-lobby-list-panel {
+  gap: 12px;
+}
+
+.pvp-lobby-list-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.pvp-room-list-title,
+.pvp-room-list-meta {
+  font-family: var(--font-arcade);
+}
+
+.pvp-room-list-title {
+  color: var(--accent-alt);
+  font-size: 12px;
+  letter-spacing: 1px;
+}
+
+.pvp-room-list-meta,
+.pvp-room-list-empty {
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.pvp-room-list {
+  display: grid;
+  gap: 10px;
+}
+
+.pvp-room-card {
+  width: 100%;
+  text-align: left;
+  border: 1px solid rgba(23, 241, 255, 0.18);
+  background: rgba(255, 255, 255, 0.04);
+  border-radius: 14px;
+  padding: 14px;
+  color: #fff;
+  display: grid;
+  gap: 6px;
+  transition: transform 0.18s ease, border-color 0.18s ease, opacity 0.18s ease;
+}
+
+.pvp-room-card:hover:not(:disabled) {
+  transform: translateY(-1px);
+  border-color: rgba(23, 241, 255, 0.38);
+}
+
+.pvp-room-card:disabled {
+  opacity: 0.55;
+  cursor: not-allowed;
+}
+
+.pvp-room-card-code {
+  font-family: var(--font-arcade);
+  color: var(--accent-good);
+  font-size: 18px;
+}
+
+.pvp-room-card-meta {
+  color: var(--muted);
+  font-size: 13px;
+}
+
 .ghost-button {
   background: transparent;
   color: var(--text);

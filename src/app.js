@@ -21,6 +21,7 @@ const BATTLE_TIMINGS = {
   robotImpactHold: 840,
   nextRoundBuffer: 1250,
 };
+const PVP_STATUS_READ_MS = 2400;
 
 const screens = {
   home: document.getElementById('screen-home'),
@@ -75,6 +76,9 @@ const pvpRoundLabel = document.getElementById('pvp-round');
 const pvpScoreYou = document.getElementById('pvp-score-you');
 const pvpScoreOpp = document.getElementById('pvp-score-opp');
 const pvpRoundOutcome = document.getElementById('pvp-round-outcome');
+const pvpRoomList = document.getElementById('pvp-room-list');
+const pvpRoomListEmpty = document.getElementById('pvp-room-list-empty');
+const pvpRoomListMeta = document.getElementById('pvp-room-list-meta');
 
 const safetyTitle = document.getElementById('safety-title');
 const safetyCopy = document.getElementById('safety-copy');
@@ -248,6 +252,7 @@ function goHome() {
   if (pvpSnapshot.roomCode) {
     pvpClient.leave();
   }
+  resetPvpMatchState('未连接');
   showScreen('home');
 }
 
@@ -256,20 +261,16 @@ function openPvp() {
   pointerActive = false;
   appState.selectedMode = MODE_PVP;
   appState.activePunchContext = MODE_PVP;
-  pvpRuntime.currentRound = 0;
-  pvpRuntime.youScore = null;
-  pvpRuntime.oppScore = null;
-  pvpRuntime.winsYou = 0;
-  pvpRuntime.winsOpp = 0;
-  pvpRuntime.playerName = getPvpInputName();
-  pvpRuntime.opponentName = '对手';
-  pvpRuntime.history = [];
-  pvpRuntime.finalResult = null;
-  pvpRuntime.isStatusAnimating = false;
-  pvpRuntime.winner = null;
-  pvpRuntime.outcome = '未连接';
+  resetPvpMatchState('正在连接...');
   updatePvpUi();
   showScreen('pvp');
+  void ensurePvpConnected().then((ok) => {
+    if (ok) {
+      refreshPvpRoomList();
+      return;
+    }
+    setPvpOutcome('无法连接服务器');
+  });
 }
 
 function getPvpInputName() {
@@ -281,6 +282,79 @@ function getPvpInputName() {
 function getPvpInputRoomCode() {
   const raw = pvpRoomCodeInput?.value ?? '';
   return String(raw).trim().toUpperCase();
+}
+
+function resetPvpMatchState(outcome = '未连接') {
+  pvpRuntime.currentRound = 0;
+  pvpRuntime.maxRounds = 3;
+  pvpRuntime.youScore = null;
+  pvpRuntime.oppScore = null;
+  pvpRuntime.winsYou = 0;
+  pvpRuntime.winsOpp = 0;
+  pvpRuntime.playerName = getPvpInputName();
+  pvpRuntime.opponentName = '对手';
+  pvpRuntime.history = [];
+  pvpRuntime.finalResult = null;
+  pvpRuntime.isStatusAnimating = false;
+  pvpRuntime.winner = null;
+  pvpRuntime.outcome = outcome;
+}
+
+function refreshPvpRoomList() {
+  const snapshot = pvpClient.getSnapshot();
+  if (snapshot.status === 'connected') {
+    pvpClient.listRooms();
+  }
+}
+
+function isPvpSuddenDeathRound(round) {
+  return Number.parseInt(round, 10) > (pvpRuntime.maxRounds || 3);
+}
+
+function getPvpRoundLabel(round) {
+  const normalizedRound = Number.parseInt(round, 10);
+  if (!Number.isFinite(normalizedRound) || normalizedRound <= 0) {
+    return '-';
+  }
+
+  if (isPvpSuddenDeathRound(normalizedRound)) {
+    return `Sudden Death Round ${normalizedRound}`;
+  }
+
+  return `Round ${normalizedRound} / ${pvpRuntime.maxRounds}`;
+}
+
+function getPvpRoundHudLabel(round) {
+  const normalizedRound = Number.parseInt(round, 10);
+  if (!Number.isFinite(normalizedRound) || normalizedRound <= 0) {
+    return '-';
+  }
+
+  if (isPvpSuddenDeathRound(normalizedRound)) {
+    return `SD ${normalizedRound}`;
+  }
+
+  return `${normalizedRound} / ${pvpRuntime.maxRounds}`;
+}
+
+async function joinPvpRoomFromLobby(roomCode) {
+  const ok = await ensurePvpConnected();
+  if (!ok) {
+    setPvpOutcome('无法连接服务器');
+    return;
+  }
+
+  const normalizedCode = String(roomCode || '').trim().toUpperCase();
+  if (!normalizedCode) {
+    setPvpOutcome('请输入房间码');
+    return;
+  }
+
+  if (pvpRoomCodeInput) {
+    pvpRoomCodeInput.value = normalizedCode;
+  }
+  pvpClient.joinRoom(normalizedCode, getPvpInputName());
+  setPvpOutcome('正在加入房间...');
 }
 
 function getDefaultPvpUrl() {
@@ -329,6 +403,7 @@ function setPvpOutcome(text) {
 function updatePvpUi() {
   const snapshot = pvpClient.getSnapshot();
   const { room, youRole, you, opp } = getPvpSides(snapshot);
+  const roomList = Array.isArray(snapshot.roomList) ? snapshot.roomList : [];
 
   if (pvpStatus) {
     const statusLabel = snapshot.status === 'connected'
@@ -343,11 +418,14 @@ function updatePvpUi() {
   }
 
   if (pvpRoomLabel) pvpRoomLabel.textContent = snapshot.roomCode || '--';
+  if (pvpRoomCodeInput && snapshot.roomCode) {
+    pvpRoomCodeInput.value = snapshot.roomCode;
+  }
   if (pvpPlayerYou) pvpPlayerYou.textContent = you ? `${you.name} (${youRole || 'YOU'})` : '--';
   if (pvpPlayerOpp) pvpPlayerOpp.textContent = opp ? opp.name : '--';
   if (pvpPlayerYouReady) pvpPlayerYouReady.textContent = you ? (you.ready ? 'READY' : 'NOT READY') : '--';
   if (pvpPlayerOppReady) pvpPlayerOppReady.textContent = !opp ? 'WAITING' : (opp.ready ? 'READY' : 'NOT READY');
-  if (pvpRoundLabel) pvpRoundLabel.textContent = pvpRuntime.currentRound ? `${pvpRuntime.currentRound} / ${pvpRuntime.maxRounds}` : '-';
+  if (pvpRoundLabel) pvpRoundLabel.textContent = getPvpRoundHudLabel(pvpRuntime.currentRound);
   if (pvpScoreYou) pvpScoreYou.textContent = pvpRuntime.youScore == null ? '-' : String(pvpRuntime.youScore);
   if (pvpScoreOpp) pvpScoreOpp.textContent = pvpRuntime.oppScore == null ? '-' : String(pvpRuntime.oppScore);
   if (pvpRoundOutcome) pvpRoundOutcome.textContent = pvpRuntime.outcome || '';
@@ -359,6 +437,45 @@ function updatePvpUi() {
   if (btnPvpJoin) btnPvpJoin.disabled = inRoom;
   if (btnPvpReady) btnPvpReady.disabled = snapshot.status !== 'connected' || !inRoom || !roomOpen || youReady;
   if (btnPvpLeave) btnPvpLeave.disabled = snapshot.status !== 'connected' || !inRoom;
+
+  if (pvpRoomListMeta) {
+    if (snapshot.status !== 'connected') {
+      pvpRoomListMeta.textContent = '连接服务器后显示';
+    } else if (roomList.length) {
+      pvpRoomListMeta.textContent = `当前 ${roomList.length} 个可加入房间`;
+    } else {
+      pvpRoomListMeta.textContent = '当前暂无可加入房间';
+    }
+  }
+
+  if (pvpRoomListEmpty) {
+    pvpRoomListEmpty.textContent = snapshot.status === 'connected'
+      ? '当前暂无可加入房间，创建一个试试。'
+      : '连接服务器后即可查看可加入房间。';
+    pvpRoomListEmpty.style.display = roomList.length ? 'none' : 'block';
+  }
+
+  if (pvpRoomList) {
+    pvpRoomList.innerHTML = '';
+    roomList.forEach((item) => {
+      const roomCard = document.createElement('button');
+      roomCard.type = 'button';
+      roomCard.className = 'pvp-room-card';
+      roomCard.disabled = snapshot.status !== 'connected' || inRoom;
+      roomCard.innerHTML = `
+        <div class="pvp-room-card-code">${escapeHtml(item.roomCode)}</div>
+        <div>${escapeHtml(item.hostName)}</div>
+        <div class="pvp-room-card-meta">${escapeHtml(String(item.playerCount))}/${escapeHtml(String(item.maxPlayers))} 人</div>
+      `;
+      roomCard.addEventListener('click', () => {
+        if (roomCard.disabled) {
+          return;
+        }
+        void joinPvpRoomFromLobby(item.roomCode);
+      });
+      pvpRoomList.appendChild(roomCard);
+    });
+  }
 }
 
 function handlePvpStatus(snapshot) {
@@ -370,6 +487,16 @@ function handlePvpStatus(snapshot) {
   if (opp?.name) pvpRuntime.opponentName = opp.name;
   if (snapshot.room?.maxRounds) pvpRuntime.maxRounds = snapshot.room.maxRounds;
   if (snapshot.room?.round) pvpRuntime.currentRound = snapshot.room.round;
+  if (snapshot.room?.wins) {
+    const wins = snapshot.room.wins;
+    if (snapshot.role === 'A') {
+      pvpRuntime.winsYou = wins.A ?? 0;
+      pvpRuntime.winsOpp = wins.B ?? 0;
+    } else if (snapshot.role === 'B') {
+      pvpRuntime.winsYou = wins.B ?? 0;
+      pvpRuntime.winsOpp = wins.A ?? 0;
+    }
+  }
   if (snapshot.lastError) pvpRuntime.outcome = snapshot.lastError;
   updatePvpUi();
 }
@@ -379,13 +506,26 @@ function handlePvpEvent(event) {
   const type = event.type;
   const data = event.data || {};
 
+  if (type === 'joined') {
+    if (pvpRoomCodeInput && data?.roomCode) {
+      pvpRoomCodeInput.value = String(data.roomCode);
+    }
+    refreshPvpRoomList();
+    return;
+  }
+
   if (type === 'startRound') {
     const round = Number.parseInt(data.round, 10);
     pvpRuntime.currentRound = Number.isFinite(round) ? round : pvpRuntime.currentRound;
     pvpRuntime.youScore = null;
     pvpRuntime.oppScore = null;
     pvpRuntime.winner = null;
-    setPvpOutcome(`Round ${pvpRuntime.currentRound} 开始，准备出拳`);
+    pvpRuntime.finalResult = null;
+    if (isPvpSuddenDeathRound(pvpRuntime.currentRound)) {
+      setPvpOutcome(`Sudden Death starts now · 第 ${pvpRuntime.currentRound} 回合`);
+    } else {
+      setPvpOutcome(`Round ${pvpRuntime.currentRound} 开始，准备出拳`);
+    }
     void startCountdown(MODE_PVP);
     return;
   }
@@ -421,7 +561,7 @@ function handlePvpEvent(event) {
     } else {
       setPvpOutcome(`Round ${roundSummary.round} 你输了 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
     }
-    void showPvpBattleStatus(roundSummary, roundSummary.round >= pvpRuntime.maxRounds);
+    void showPvpBattleStatus(roundSummary);
     return;
   }
 
@@ -440,9 +580,28 @@ function handlePvpEvent(event) {
     return;
   }
 
+  if (type === 'left') {
+    resetPvpMatchState('已离开房间');
+    if (pvpRoomCodeInput) {
+      pvpRoomCodeInput.value = '';
+    }
+    refreshPvpRoomList();
+    updatePvpUi();
+    return;
+  }
+
   if (type === 'opponentLeft') {
-    setPvpOutcome('对手已离开房间');
+    resetPvpMatchState('对手已离开房间');
+    refreshPvpRoomList();
     showScreen('pvp');
+    return;
+  }
+
+  if (type === 'error') {
+    const snapshot = pvpClient.getSnapshot();
+    if (!snapshot.roomCode) {
+      refreshPvpRoomList();
+    }
   }
 }
 
@@ -700,7 +859,7 @@ function updatePvpBattleHud() {
   if (battlePlayerLabel) battlePlayerLabel.textContent = '你的胜场';
   if (battleRoundLabel) battleRoundLabel.textContent = 'PVP ROUND';
   if (battleHudRobotLabel) battleHudRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
-  battleRound.textContent = `${pvpRuntime.currentRound} / ${pvpRuntime.maxRounds}`;
+  battleRound.textContent = getPvpRoundHudLabel(pvpRuntime.currentRound);
   battlePlayerHp.textContent = String(pvpRuntime.winsYou);
   battleRobotHp.textContent = String(pvpRuntime.winsOpp);
 }
@@ -767,7 +926,7 @@ async function startCountdown(context) {
   countdownContext.textContent = context === MODE_BATTLE
     ? `模式二 · Round ${battleController.getSnapshot().currentRound}`
     : context === MODE_PVP
-      ? `模式三 · Round ${pvpRuntime.currentRound || 1}`
+      ? `模式三 · ${getPvpRoundLabel(pvpRuntime.currentRound || 1)}`
       : '模式一：出拳测试';
 
   for (let i = 3; i > 0; i -= 1) {
@@ -805,7 +964,7 @@ async function startPunch(context) {
     punchInstruction.textContent = narrative.punchInstruction;
     updateBattleHud();
   } else if (context === MODE_PVP) {
-    punchInstruction.textContent = `PVP Round ${pvpRuntime.currentRound || 1} · 对战 ${pvpRuntime.opponentName}`;
+    punchInstruction.textContent = `${getPvpRoundLabel(pvpRuntime.currentRound || 1)} · 对战 ${pvpRuntime.opponentName}`;
     updatePvpBattleHud();
   } else {
     punchInstruction.textContent = '挥动手机，击打沙包！';
@@ -1052,7 +1211,7 @@ function winnerMessageForAutoResult(snapshot, displayName) {
 
 function getPvpWinnerText(winner) {
   if (winner === 'draw') return '这一回合平分秋色';
-  if (winner === pvpRuntime.role) return `你在 Round ${pvpRuntime.currentRound} 压住了 ${pvpRuntime.opponentName}`;
+  if (winner === pvpRuntime.role) return `你在 ${getPvpRoundLabel(pvpRuntime.currentRound)} 压住了 ${pvpRuntime.opponentName}`;
   return `${pvpRuntime.opponentName} 在这一回合占了上风`;
 }
 
@@ -1088,19 +1247,19 @@ async function playPvpStatusAnimation(roundSummary) {
   battleStatusPhase.textContent = getPvpWinnerText(roundSummary.winner);
 }
 
-async function showPvpBattleStatus(roundSummary, battleFinished) {
+async function showPvpBattleStatus(roundSummary) {
   const autoAdvanceToken = ++appState.battleAutoAdvanceToken;
   pvpRuntime.isStatusAnimating = true;
   if (fighterRobotLabel) fighterRobotLabel.textContent = pvpRuntime.opponentName;
   if (battleStatusPlayerLabel) battleStatusPlayerLabel.textContent = '你的胜场';
   if (battleStatusRobotLabel) battleStatusRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
-  battleStatusTitle.textContent = `PVP Round ${roundSummary.round} 结束`;
-  battleStatusCopy.textContent = `你的出拳指数 ${roundSummary.youScore}，${pvpRuntime.opponentName} 的出拳指数 ${roundSummary.oppScore}。当前大比分 ${pvpRuntime.winsYou} : ${pvpRuntime.winsOpp}。`;
+  battleStatusTitle.textContent = `${getPvpRoundLabel(roundSummary.round)} 结束`;
+  battleStatusCopy.textContent = `${isPvpSuddenDeathRound(roundSummary.round) ? '加时赛 · ' : ''}你的出拳指数 ${roundSummary.youScore}，${pvpRuntime.opponentName} 的出拳指数 ${roundSummary.oppScore}。当前大比分 ${pvpRuntime.winsYou} : ${pvpRuntime.winsOpp}。`;
   battleStatusPlayerHp.textContent = String(pvpRuntime.winsYou);
   battleStatusRobotHp.textContent = String(pvpRuntime.winsOpp);
-  btnBattleNext.textContent = '查看最终结果';
+  btnBattleNext.textContent = '正在同步...';
   btnBattleNext.disabled = true;
-  btnBattleNext.style.display = battleFinished ? 'block' : 'none';
+  btnBattleNext.style.display = 'none';
   showScreen('battleStatus');
   await playPvpStatusAnimation(roundSummary);
 
@@ -1109,23 +1268,29 @@ async function showPvpBattleStatus(roundSummary, battleFinished) {
     return;
   }
 
-  if (!battleFinished) {
-    battleStatusPhase.textContent = `等待 ${pvpRuntime.opponentName} 的下一回合同步...`;
+  await wait(PVP_STATUS_READ_MS);
+
+  if (autoAdvanceToken !== appState.battleAutoAdvanceToken) {
     pvpRuntime.isStatusAnimating = false;
     return;
   }
 
-  battleStatusPhase.textContent = `${pvpRuntime.opponentName} 挑战结束，准备查看总结果`;
-  btnBattleNext.disabled = false;
   pvpRuntime.isStatusAnimating = false;
   if (pvpRuntime.finalResult) {
     showPvpBattleResult();
+    return;
   }
+
+  battleStatusPhase.textContent = isPvpSuddenDeathRound(roundSummary.round + 1)
+    ? `Sudden Death 即将继续，等待 ${pvpRuntime.opponentName} 的下一回合同步...`
+    : `等待 ${pvpRuntime.opponentName} 的下一回合同步...`;
 }
 
 function showPvpBattleResult() {
   const finalResult = pvpRuntime.finalResult;
   if (!finalResult) return;
+  const wentToSuddenDeath = pvpRuntime.history.some((item) => item.round > pvpRuntime.maxRounds);
+  const overtimeText = wentToSuddenDeath ? '经过 Sudden Death 后，' : '';
 
   if (battleResultScreen) {
     battleResultScreen.classList.remove('is-revealing', 'is-win', 'is-lose', 'is-draw');
@@ -1135,10 +1300,12 @@ function showPvpBattleResult() {
   }
 
   if (battleResultKicker) {
-    battleResultKicker.textContent = 'PVP SHOWDOWN';
+    battleResultKicker.textContent = wentToSuddenDeath ? 'PVP OVERTIME' : 'PVP SHOWDOWN';
   }
   if (battleResultDefeated) {
-    battleResultDefeated.textContent = `${pvpRuntime.playerName} VS ${pvpRuntime.opponentName}`;
+    battleResultDefeated.textContent = wentToSuddenDeath
+      ? `${pvpRuntime.playerName} VS ${pvpRuntime.opponentName} · SUDDEN DEATH`
+      : `${pvpRuntime.playerName} VS ${pvpRuntime.opponentName}`;
   }
   if (battleFinalPlayerLabel) battleFinalPlayerLabel.textContent = '你的胜场';
   if (battleFinalRobotLabel) battleFinalRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
@@ -1146,15 +1313,15 @@ function showPvpBattleResult() {
   const winner = finalResult.winner;
   if (winner === 'draw') {
     battleResultTitle.textContent = 'Draw!';
-    battleResultCopy.textContent = `你和 ${pvpRuntime.opponentName} 三回合打成平手，下一次再狠狠干出胜负。`;
+    battleResultCopy.textContent = `你和 ${pvpRuntime.opponentName}${overtimeText}仍然战成平手。`;
     feedbackModule.softPulse();
   } else if (winner === pvpRuntime.role) {
     battleResultTitle.textContent = 'Win!';
-    battleResultCopy.textContent = `你在三回合里击败了 ${pvpRuntime.opponentName}，这场 PVP 对决已经被你拿下。`;
+    battleResultCopy.textContent = `你${overtimeText}击败了 ${pvpRuntime.opponentName}，这场 PVP 对决已经被你拿下。`;
     feedbackModule.victory();
   } else {
     battleResultTitle.textContent = 'Lose!';
-    battleResultCopy.textContent = `${pvpRuntime.opponentName} 暂时赢下了这场 PVP，对方的节奏更稳，但你已经把对局打热了。`;
+    battleResultCopy.textContent = `${pvpRuntime.opponentName}${overtimeText}拿下了这场 PVP，对方的节奏更稳，但你已经把对局打热了。`;
     feedbackModule.defeat();
   }
 
@@ -1275,23 +1442,13 @@ if (btnPvpCreate) {
     }
     pvpClient.createRoom(getPvpInputName());
     setPvpOutcome('已创建房间，等待对手加入...');
+    refreshPvpRoomList();
   });
 }
 
 if (btnPvpJoin) {
-  btnPvpJoin.addEventListener('click', async () => {
-    const ok = await ensurePvpConnected();
-    if (!ok) {
-      setPvpOutcome('无法连接服务器');
-      return;
-    }
-    const roomCode = getPvpInputRoomCode();
-    if (!roomCode) {
-      setPvpOutcome('请输入房间码');
-      return;
-    }
-    pvpClient.joinRoom(roomCode, getPvpInputName());
-    setPvpOutcome('正在加入房间...');
+  btnPvpJoin.addEventListener('click', () => {
+    void joinPvpRoomFromLobby(getPvpInputRoomCode());
   });
 }
 
@@ -1304,17 +1461,7 @@ if (btnPvpReady) {
 if (btnPvpLeave) {
   btnPvpLeave.addEventListener('click', () => {
     pvpClient.leave();
-    pvpRuntime.currentRound = 0;
-    pvpRuntime.youScore = null;
-    pvpRuntime.oppScore = null;
-    pvpRuntime.winsYou = 0;
-    pvpRuntime.winsOpp = 0;
-    pvpRuntime.history = [];
-    pvpRuntime.finalResult = null;
-    pvpRuntime.opponentName = '对手';
-    pvpRuntime.winner = null;
-    setPvpOutcome('已离开房间');
-    updatePvpUi();
+    refreshPvpRoomList();
   });
 }
 

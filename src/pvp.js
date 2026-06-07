@@ -18,6 +18,7 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     roomCode: '',
     role: '',
     room: null,
+    roomList: [],
     lastError: '',
   };
 
@@ -30,6 +31,7 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       roomCode: state.roomCode,
       role: state.role,
       room: state.room ? { ...state.room } : null,
+      roomList: state.roomList.map((item) => ({ ...item })),
       lastError: state.lastError,
     });
   }
@@ -75,6 +77,7 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       state.room = null;
       state.roomCode = '';
       state.role = '';
+      state.roomList = [];
       setStatus('disconnected');
     });
 
@@ -101,6 +104,11 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
 
       if (type === 'room') {
         state.room = data || null;
+        emitStatus();
+      }
+
+      if (type === 'roomList') {
+        state.roomList = Array.isArray(data) ? data.map((item) => ({ ...item })) : [];
         emitStatus();
       }
 
@@ -141,6 +149,11 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     wsSend(ws, { type: 'leave', data: {} });
   }
 
+  function listRooms() {
+    if (!ensureConnected()) return;
+    wsSend(ws, { type: 'listRooms', data: {} });
+  }
+
   function getSnapshot() {
     return {
       url: state.url,
@@ -148,6 +161,7 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
       roomCode: state.roomCode,
       role: state.role,
       room: state.room ? { ...state.room } : null,
+      roomList: state.roomList.map((item) => ({ ...item })),
       lastError: state.lastError,
     };
   }
@@ -159,6 +173,7 @@ export function createPvpClient({ onEvent, onStatus } = {}) {
     ready,
     sendPunch,
     leave,
+    listRooms,
     getSnapshot,
   };
 }
