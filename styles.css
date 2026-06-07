@@ -76,6 +76,24 @@ button {
   font-family: var(--font-arcade);
 }
 
+.text-input {
+  width: 100%;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(23, 241, 255, 0.22);
+  background: rgba(4, 8, 20, 0.72);
+  color: var(--text);
+  box-shadow: 0 0 0 1px rgba(255, 42, 166, 0.12), 0 10px 20px rgba(0, 0, 0, 0.35);
+  font-family: var(--font-arcade);
+  letter-spacing: 0.4px;
+}
+
+.text-input:focus {
+  outline: none;
+  border-color: rgba(255, 42, 166, 0.45);
+  box-shadow: 0 0 0 2px rgba(255, 42, 166, 0.2), 0 10px 20px rgba(0, 0, 0, 0.35);
+}
+
 .app-shell {
   width: 100%;
   max-width: 480px;
@@ -935,6 +953,16 @@ button {
   color: #fff;
   font-size: 20px;
   box-shadow: 0 0 22px rgba(255, 42, 166, 0.26), 0 10px 24px rgba(0, 0, 0, 0.35);
+}
+
+.pvp-action-button {
+  border: none;
+  border-radius: 999px;
+  box-shadow: 0 12px 26px rgba(0, 0, 0, 0.34), 0 0 18px rgba(23, 241, 255, 0.12);
+}
+
+.pvp-action-button:disabled {
+  border: none;
 }
 
 .ghost-button {

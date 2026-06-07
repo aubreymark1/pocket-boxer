@@ -1,380 +1,492 @@
 <!DOCTYPE html>
 <html lang="zh-CN">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-    <title>Pocket Boxer</title>
-    <link rel="stylesheet" href="./styles.css" />
-  </head>
-  <body>
-    <div class="app-shell">
-      <main id="app-container">
 
-        <section id="screen-home" class="screen screen-home active">
-          <div class="screen-kicker screen-kicker-center">
-            NEON BOXING SIM
-          </div>
-          <div class="game-logo home-logo" style="margin-bottom: 16px;">
-            <h1 style="font-size: 48px; margin: 0; line-height: 1;">Pocket Boxer</h1>
-            <p style="color: var(--muted); margin: 12px 0 0; font-size: 16px; font-weight: bold; letter-spacing: 1px;">
-              握紧手机，挥出一拳，主宰霓虹拳馆
-            </p>
-          </div>
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Pocket Boxer</title>
+  <link rel="stylesheet" href="./styles.css" />
+</head>
 
-          <div class="punching-bag-container home-stage">
-            <div class="punching-bag" id="bag-home"></div>
-          </div>
+<body>
+  <div class="app-shell">
+    <main id="app-container">
 
-          <div class="home-actions" style="margin-top: auto; width: 100%; display: grid; gap: 12px;">
-            <button id="btn-mode-test" class="accent-button" style="font-size: 26px; padding: 16px; width: 100%;">出拳测试</button>
-            <button id="btn-mode-battle" class="primary-button" style="font-size: 22px; padding: 16px; width: 100%;">人机对战</button>
-            <button id="btn-mode-pvp" class="secondary-button" style="font-size: 18px; padding: 16px; width: 100%;">PVP 对战，暂未开放</button>
-            <p style="color: var(--muted); font-size: 14px; margin: 0;">模式一验证出拳指数，模式二进入三回合机器人对战，模式三展示在线 PVP 概念。</p>
-          </div>
-        </section>
-
-        <section id="screen-safety" class="screen screen-stack">
-          <div class="screen-kicker screen-kicker-right">READY CHECK</div>
-          <h2 id="safety-title" style="color: var(--accent-warn); font-size: 32px; margin-bottom: 24px;">模式一：出拳力度测试</h2>
-          <div class="info-row" style="margin-bottom: 24px; text-align: left; padding: 24px; width: 100%;">
-            <p id="safety-copy" style="color: #fff; margin: 0; line-height: 1.9; font-size: 16px;">
-              请握紧手机。<br>保持正前方。<br>听到提示后短幅度挥拳。
-            </p>
-          </div>
-          <p id="safety-subcopy" style="color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0 0 28px;">目标是在 10 秒内理解玩法并稳定打出一拳。</p>
-          <div style="width: 100%; display: grid; gap: 12px;">
-            <button id="btn-safety-ok" class="primary-button" style="width: 100%; font-size: 24px; padding: 16px;">我准备好了</button>
-            <button id="btn-safety-home" class="secondary-button" style="width: 100%; font-size: 18px; padding: 14px;">返回首页</button>
-          </div>
-        </section>
-
-        <section id="screen-calibrating" class="screen screen-centered">
-          <div class="punching-bag-container" style="opacity: 0.7;">
-            <div class="punching-bag"></div>
-          </div>
-          <h2 class="pulse-text" style="color: var(--accent-alt); font-size: 28px; margin-top: 32px;">正在校准...</h2>
-          <p style="color: #fff; margin: 12px 0 0; font-size: 16px;">请保持手机静止</p>
-        </section>
-
-        <section id="screen-countdown" class="screen screen-centered screen-countdown">
-          <div id="countdown-context" style="position: absolute; top: 10%; color: var(--accent-alt); font-family: var(--font-arcade); font-size: 22px; letter-spacing: 2px;">模式一：出拳测试</div>
-          <div class="punching-bag-container">
-            <div class="punching-bag"></div>
-          </div>
-          <div id="countdown-display" class="pop-anim" style="position: absolute; font-size: 180px; font-weight: bold; color: var(--accent-good); text-shadow: 8px 8px 0 #000; font-family: var(--font-arcade); z-index: 10;">3</div>
-        </section>
-
-        <section id="screen-punch" class="screen screen-stack screen-punch-layout">
-          <div id="battle-hud" class="info-row battle-hud-panel" style="display: none; padding: 14px 16px; z-index: 6;">
-            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
-              <div>
-                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">PLAYER HP</div>
-                <div id="battle-player-hp" style="font-size: 28px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
-              </div>
-              <div style="text-align: center;">
-                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">ROUND</div>
-                <div id="battle-round" style="font-size: 28px; color: var(--accent-good); font-family: var(--font-arcade);">1 / 3</div>
-              </div>
-              <div style="text-align: right;">
-                <div id="battle-hud-robot-label" style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">挑战 HP</div>
-                <div id="battle-robot-hp" style="font-size: 28px; color: var(--accent); font-family: var(--font-arcade);">100</div>
-              </div>
-            </div>
-          </div>
-
-          <div id="punch-motion-ui" class="punch-motion-panel" style="width: 100%;">
-            <div class="punch-callout">
-              <h2 id="punch-instruction" class="pulse-text punch-instruction" style="color: var(--accent); font-size: 36px; text-shadow: 4px 4px 0 #000; margin: 0;">挥动手机，击打沙包！</h2>
-              <p class="punch-subcopy">保持手机正前方，听到提示后快速挥出一拳。</p>
-            </div>
-
-            <div id="punch-stage" class="punching-bag-container punch-stage">
-              <div class="punching-bag" id="bag-punch"></div>
-            </div>
-          </div>
-
-          <div id="punch-fallback-ui" class="punch-fallback-panel" style="display: none; width: 100%;">
-            <div style="background: rgba(255, 140, 0, 0.15); border: 2px dashed var(--accent-warn); padding: 12px; margin-bottom: 16px; border-radius: 8px;">
-              <h2 style="color: var(--accent-alt); font-size: 20px; margin-bottom: 8px;">传感器不可用</h2>
-              <p style="color: #fff; font-size: 14px; margin: 0;">已切换至蓄力模式，请长按下方按钮蓄力，松手出拳</p>
-            </div>
-            <div class="charge-bar" style="height: 36px; border-width: 3px; margin-bottom: 24px;">
-              <div id="fallback-charge-fill" class="charge-fill"></div>
-            </div>
-            <button id="btn-fallback-charge" class="charge-button" style="height: 80px; font-size: 24px;">按住蓄力</button>
-          </div>
-        </section>
-
-        <section id="screen-result" class="screen screen-stack screen-result-layout">
-          <div class="screen-kicker screen-kicker-right">
-            IMPACT FEED
-          </div>
-          <h2 id="result-title" class="result-title-banner" style="font-size: 48px; color: var(--accent-good); margin: 0; text-shadow: 4px 4px 0 #000; z-index: 10; font-family: var(--font-arcade); font-style: italic;">命中！</h2>
-
-          <div class="punching-bag-container bag-hit result-stage">
-            <div class="punching-bag" id="bag-result"></div>
-          </div>
-
-          <div id="damage-hud" class="pop-anim result-damage-hud" style="color: #fff; text-shadow: 4px 4px 0 #000; font-family: var(--font-arcade); z-index: 20; text-align: center;">
-            <div style="font-size: 22px; color: var(--accent-alt);">伤害值</div>
-            <div id="res-damage" style="font-size: 64px; color: var(--accent);">-1240</div>
-          </div>
-
-          <div class="result-rank-panel">
-            <div class="result-rank-badge">
-              <div class="result-rank-label">战绩评级</div>
-              <div id="res-tier" class="result-rank-tier">B</div>
-            </div>
-            <div class="result-meter-card">
-              <div class="result-meter-head">
-                <span class="result-stat-label">气势槽</span>
-                <span id="res-meter-label" class="result-meter-label">50 / 100</span>
-              </div>
-              <div class="result-meter-track">
-                <div id="res-meter-fill" class="result-meter-fill"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="result-hud result-grid-panel stats-grid result-stats-grid" style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
-            <div class="info-row result-stat-card">
-              <div class="result-stat-label">出拳指数</div>
-              <div id="res-score" class="result-stat-value result-stat-value-score" style="font-size: 42px; color: var(--accent-good); font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">--</div>
-            </div>
-            <div class="info-row result-stat-card">
-              <div class="result-stat-label">拳击评级</div>
-              <div id="res-rating" class="result-stat-value" style="font-size: 28px; color: #fff; font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">HEAVY HIT</div>
-            </div>
-            <div class="info-row result-stat-card">
-              <div class="result-stat-label">本次称号</div>
-              <div id="res-title" class="result-stat-value" style="font-size: 24px; color: var(--accent-alt); font-family: var(--font-arcade);">校园拳王</div>
-            </div>
-            <div class="info-row result-stat-card">
-              <div class="result-stat-label">气势判定</div>
-              <div id="res-copy" class="result-stat-value result-stat-value-copy" style="font-size: 14px; color: #fff; line-height: 1.6;">试探级压迫</div>
-            </div>
-          </div>
-
-          <div class="screen-actions" style="width: 100%; display: grid; gap: 10px;">
-            <button id="btn-result-retry" class="accent-button" style="font-size: 24px; padding: 16px; width: 100%;">再来一次</button>
-            <button id="btn-result-battle" class="primary-button" style="font-size: 18px; padding: 14px; width: 100%;">进入人机对战</button>
-            <button id="btn-result-home" class="secondary-button" style="font-size: 18px; padding: 14px; width: 100%;">返回首页</button>
-          </div>
-        </section>
-
-        <section id="screen-battle-prep" class="screen screen-stack">
-          <h2 style="color: var(--accent-alt); font-size: 34px; margin-bottom: 18px;">模式二：人机对战</h2>
-          <div class="info-row" style="width: 100%; text-align: left; padding: 24px; margin-bottom: 24px;">
-            <p id="battle-prep-copy" style="margin: 0; color: #fff; line-height: 1.9; font-size: 16px;">
-              你将和拳击机器人进行三回合对战。<br>
-              每回合你先出拳，机器人会根据你的力度自动反击。<br>
-              三轮结束后，剩余 HP 更高的一方获胜。
-            </p>
-          </div>
-          <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 20px;">
-            <label for="battle-challenge-input" style="display: block; margin-bottom: 10px; color: var(--accent-good); font-size: 13px; font-family: var(--font-arcade); letter-spacing: 1px;">
-              输入你今天想打倒的挑战
-            </label>
-            <input
-              id="battle-challenge-input"
-              type="text"
-              maxlength="24"
-              placeholder="例如：小组 presentation / 期末答辩 / 周一早八"
-              style="width: 100%; height: 52px; padding: 0 14px; border: 1px solid rgba(23, 241, 255, 0.36); background: rgba(7, 14, 30, 0.9); color: #fff; font-size: 16px; outline: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(23, 241, 255, 0.08);"
-            />
-            <p id="battle-challenge-preview" style="margin: 12px 0 0; color: var(--muted); line-height: 1.7; font-size: 14px;">
-              输入一个现实烦恼，让这场对战更像把焦虑一拳打飞。
-            </p>
-          </div>
-          <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 24px;">
-            <div class="info-row" style="text-align: center;">
-              <div style="font-size: 12px; color: var(--muted);">玩家 HP</div>
-              <div style="font-size: 34px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
-            </div>
-            <div class="info-row" style="text-align: center;">
-              <div id="battle-prep-opponent-label" style="font-size: 12px; color: var(--muted);">挑战对象 HP</div>
-              <div style="font-size: 34px; color: var(--accent); font-family: var(--font-arcade);">100</div>
-            </div>
-          </div>
-          <div style="width: 100%; display: grid; gap: 12px;">
-            <button id="btn-battle-start" class="accent-button" style="font-size: 24px; padding: 16px;">开始战斗</button>
-            <button id="btn-battle-prep-home" class="secondary-button" style="font-size: 18px; padding: 14px;">返回首页</button>
-          </div>
-        </section>
-
-        <section id="screen-battle-status" class="screen screen-stack screen-battle-layout">
-          <h2 id="battle-status-title" style="color: var(--accent-good); font-size: 42px; margin: 0 0 18px; font-family: var(--font-arcade);">Round 1 结束</h2>
-          <div id="battle-status-phase" style="font-family: var(--font-arcade); font-size: 18px; color: var(--accent-alt); letter-spacing: 2px; margin-bottom: 14px;">
-            战斗回放中...
-          </div>
-          <div id="battle-arena" class="battle-arena">
-            <div class="arena-backdrop">
-              <div class="arena-cityline"></div>
-              <div class="arena-crowd"></div>
-              <div class="arena-lights"></div>
-              <div class="arena-energy-ring"></div>
-              <div class="arena-scanlines"></div>
-            </div>
-            <div class="arena-floor"></div>
-            <div class="arena-impact-burst"></div>
-            <div class="arena-speedlines arena-speedlines-player"></div>
-            <div class="arena-speedlines arena-speedlines-robot"></div>
-            <div class="fighter-card fighter-player" id="fighter-player">
-              <div class="fighter-label">PLAYER</div>
-              <div class="fighter-avatar">
-                <div class="fighter-trail fighter-trail-player"></div>
-                <img
-                  class="fighter-illustration"
-                  alt="赛博朋克拳手"
-                  src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cinematic%20cyberpunk%20boxing%20hero%2C%20young%20fighter%20launching%20a%20punch%2C%20neon%20teal%20and%20magenta%20exosuit%2C%20dynamic%20foreshortened%20pose%2C%20full%20body%2C%20dramatic%20rim%20light%2C%20high%20energy%2C%20futuristic%20arena%2C%20game%20key%20art%2C%20dark%20background&image_size=portrait_4_3"
-                />
-                <div class="fighter-shadow"></div>
-                <div class="fighter-glow fighter-glow-player"></div>
-                <div class="fighter-platform"></div>
-              </div>
-              <div id="battle-popup-player" class="damage-popup damage-popup-player">-34</div>
-            </div>
-            <div class="arena-divider">
-              <div class="arena-flash"></div>
-              <div class="arena-vs">VS</div>
-            </div>
-            <div class="fighter-card fighter-robot" id="fighter-robot">
-              <div id="fighter-robot-label" class="fighter-label">CHALLENGE</div>
-              <div class="fighter-avatar">
-                <div class="fighter-trail fighter-trail-robot"></div>
-                <img
-                  class="fighter-illustration"
-                  alt="赛博朋克拳击机器人"
-                  src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cinematic%20cyberpunk%20boxing%20robot%20enemy%2C%20heavy%20combat%20android%20throwing%20a%20violent%20counterpunch%2C%20crimson%20neon%20visor%2C%20armored%20fists%2C%20dynamic%20foreshortened%20pose%2C%20full%20body%2C%20futuristic%20arena%2C%20dramatic%20lighting%2C%20high%20energy%2C%20game%20key%20art%2C%20dark%20background&image_size=portrait_4_3"
-                />
-                <div class="challenge-core-wrap" aria-hidden="true">
-                  <div id="battle-challenge-core" class="challenge-core">CHALLENGE</div>
-                  <div class="challenge-shards">
-                    <span class="challenge-shard challenge-shard-1"></span>
-                    <span class="challenge-shard challenge-shard-2"></span>
-                    <span class="challenge-shard challenge-shard-3"></span>
-                    <span class="challenge-shard challenge-shard-4"></span>
-                    <span class="challenge-shard challenge-shard-5"></span>
-                    <span class="challenge-shard challenge-shard-6"></span>
-                  </div>
-                </div>
-                <div class="fighter-shadow"></div>
-                <div class="fighter-glow fighter-glow-robot"></div>
-                <div class="fighter-platform"></div>
-              </div>
-              <div id="battle-popup-robot" class="damage-popup damage-popup-robot">-38</div>
-            </div>
-          </div>
-          <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 18px;">
-            <p id="battle-status-copy" style="margin: 0; color: #fff; line-height: 1.9; font-size: 16px;">
-              你的出拳指数：76。你造成了 38 点伤害，机器人反击造成 34 点伤害。
-            </p>
-          </div>
-          <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 20px;">
-            <div class="info-row" style="text-align: center;">
-              <div style="font-size: 12px; color: var(--muted);">你的剩余 HP</div>
-              <div id="battle-status-player-hp" style="font-size: 34px; color: var(--accent-alt); font-family: var(--font-arcade);">66</div>
-            </div>
-            <div class="info-row" style="text-align: center;">
-              <div id="battle-status-robot-label" style="font-size: 12px; color: var(--muted);">挑战剩余 HP</div>
-              <div id="battle-status-robot-hp" style="font-size: 34px; color: var(--accent); font-family: var(--font-arcade);">62</div>
-            </div>
-          </div>
-          <div class="screen-actions" style="width: 100%; display: grid; gap: 12px;">
-            <button id="btn-battle-next" class="accent-button" style="font-size: 24px; padding: 16px;">下一回合</button>
-            <button id="btn-battle-status-home" class="secondary-button" style="font-size: 18px; padding: 14px;">返回首页</button>
-          </div>
-        </section>
-
-        <section id="screen-battle-result" class="screen screen-stack screen-battle-result-layout">
-          <div class="battle-result-hero">
-            <div id="battle-result-kicker" class="battle-result-kicker">FINISHER</div>
-            <div class="battle-result-impact-mark"></div>
-            <h2 id="battle-result-title" style="font-size: 54px; color: var(--accent-good); margin: 0 0 14px; font-family: var(--font-arcade);">Win!</h2>
-            <div id="battle-result-defeated" class="battle-result-defeated">CHALLENGE SHATTERED</div>
-          </div>
-          <p id="battle-result-copy" style="color: #fff; font-size: 16px; line-height: 1.8; margin: 0 0 24px;">
-            你击败了拳击机器人。今日称号：手机拳王
+      <section id="screen-home" class="screen screen-home active">
+        <div class="screen-kicker screen-kicker-center">
+          NEON BOXING SIM
+        </div>
+        <div class="game-logo home-logo" style="margin-bottom: 16px;">
+          <h1 style="font-size: 48px; margin: 0; line-height: 1;">Pocket Boxer</h1>
+          <p style="color: var(--muted); margin: 12px 0 0; font-size: 16px; font-weight: bold; letter-spacing: 1px;">
+            握紧手机，挥出一拳，主宰霓虹拳馆
           </p>
-          <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 14px;">
-            <div class="info-row" style="text-align: center;">
-              <div style="font-size: 12px; color: var(--muted);">玩家剩余 HP</div>
-              <div id="battle-final-player-hp" style="font-size: 32px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
-            </div>
-            <div class="info-row" style="text-align: center;">
-              <div id="battle-final-robot-label" style="font-size: 12px; color: var(--muted);">挑战剩余 HP</div>
-              <div id="battle-final-robot-hp" style="font-size: 32px; color: var(--accent); font-family: var(--font-arcade);">0</div>
-            </div>
-            <div class="info-row" style="text-align: center;">
-              <div style="font-size: 12px; color: var(--muted);">三回合总伤害</div>
-              <div id="battle-final-damage" style="font-size: 32px; color: var(--accent-good); font-family: var(--font-arcade);">120</div>
-            </div>
-            <div class="info-row" style="text-align: center;">
-              <div style="font-size: 12px; color: var(--muted);">最高出拳指数</div>
-              <div id="battle-final-score" style="font-size: 32px; color: #fff; font-family: var(--font-arcade);">95</div>
-            </div>
-          </div>
-          <div class="screen-actions" style="width: 100%; display: grid; gap: 12px;">
-            <button id="btn-battle-restart" class="accent-button" style="font-size: 24px; padding: 16px;">再战一次</button>
-            <button id="btn-battle-result-home" class="secondary-button" style="font-size: 18px; padding: 14px;">返回首页</button>
-          </div>
-        </section>
+        </div>
 
-        <section id="screen-pvp" class="screen screen-stack">
-          <h2 style="color: var(--accent-alt); font-size: 34px; margin-bottom: 18px;">模式三：PVP 在线对战概念</h2>
-          <div class="info-row" style="width: 100%; text-align: left; padding: 24px; margin-bottom: 24px;">
-            <p style="margin: 0; color: #fff; line-height: 1.9; font-size: 16px;">
-              该模式暂不作为黑客松 MVP 开发内容。<br>
-              后续将支持两名玩家在线匹配或输入房间码对战。<br>
-              双方分别挥拳，系统计算各自出拳指数并转换为伤害，进行三回合 PVP 对决。
-            </p>
-          </div>
-          <div style="width: 100%; display: grid; gap: 12px;">
-            <button id="btn-pvp-home" class="accent-button" style="font-size: 20px; padding: 16px;">返回首页</button>
-          </div>
-        </section>
+        <div class="punching-bag-container home-stage">
+          <div class="punching-bag" id="bag-home"></div>
+        </div>
 
-      </main>
-    </div>
+        <div class="home-actions" style="margin-top: auto; width: 100%; display: grid; gap: 12px;">
+          <button id="btn-mode-test" class="accent-button"
+            style="font-size: 26px; padding: 16px; width: 100%;">出拳测试</button>
+          <button id="btn-mode-battle" class="primary-button"
+            style="font-size: 22px; padding: 16px; width: 100%;">人机对战</button>
+          <button id="btn-mode-pvp" class="secondary-button" style="font-size: 18px; padding: 16px; width: 100%;">PVP
+            在线对战</button>
+          <p style="color: var(--muted); font-size: 14px; margin: 0;">模式一验证出拳指数，模式二进入三回合机器人对战，模式三支持房间码双人联机。</p>
+        </div>
+      </section>
 
-    <script type="module" src="./src/app.js"></script>
-    <script>
-      // UI Animation Patch
-      const observer = new MutationObserver((mutations) => {
-        mutations.forEach((mutation) => {
-          if (mutation.type === 'childList' || mutation.type === 'characterData') {
-            const target = mutation.target.nodeType === 3 ? mutation.target.parentElement : mutation.target;
-            
-            if (target.id === 'res-score' && target.textContent !== '--') {
-              target.classList.remove('pop-anim');
-              void target.offsetWidth;
-              target.classList.add('pop-anim');
-              
-              const damageHud = document.getElementById('damage-hud');
-              if (damageHud) {
-                damageHud.classList.remove('pop-anim');
-                void damageHud.offsetWidth;
-                damageHud.classList.add('pop-anim');
-              }
-              
-              const resultBag = document.getElementById('bag-result');
-              if (resultBag) {
-                const bagContainer = resultBag.parentElement;
-                bagContainer.classList.remove('bag-hit');
-                void bagContainer.offsetWidth;
-                bagContainer.classList.add('bag-hit');
-              }
+      <section id="screen-safety" class="screen screen-stack">
+        <div class="screen-kicker screen-kicker-right">READY CHECK</div>
+        <h2 id="safety-title" style="color: var(--accent-warn); font-size: 32px; margin-bottom: 24px;">模式一：出拳力度测试</h2>
+        <div class="info-row" style="margin-bottom: 24px; text-align: left; padding: 24px; width: 100%;">
+          <p id="safety-copy" style="color: #fff; margin: 0; line-height: 1.9; font-size: 16px;">
+            请握紧手机。<br>保持正前方。<br>听到提示后短幅度挥拳。
+          </p>
+        </div>
+        <p id="safety-subcopy" style="color: var(--muted); font-size: 14px; line-height: 1.8; margin: 0 0 28px;">目标是在 10
+          秒内理解玩法并稳定打出一拳。</p>
+        <div style="width: 100%; display: grid; gap: 12px;">
+          <button id="btn-safety-ok" class="primary-button"
+            style="width: 100%; font-size: 24px; padding: 16px;">我准备好了</button>
+          <button id="btn-safety-home" class="secondary-button"
+            style="width: 100%; font-size: 18px; padding: 14px;">返回首页</button>
+        </div>
+      </section>
+
+      <section id="screen-calibrating" class="screen screen-centered">
+        <div class="punching-bag-container" style="opacity: 0.7;">
+          <div class="punching-bag"></div>
+        </div>
+        <h2 class="pulse-text" style="color: var(--accent-alt); font-size: 28px; margin-top: 32px;">正在校准...</h2>
+        <p style="color: #fff; margin: 12px 0 0; font-size: 16px;">请保持手机静止</p>
+      </section>
+
+      <section id="screen-countdown" class="screen screen-centered screen-countdown">
+        <div id="countdown-context"
+          style="position: absolute; top: 10%; color: var(--accent-alt); font-family: var(--font-arcade); font-size: 22px; letter-spacing: 2px;">
+          模式一：出拳测试</div>
+        <div class="punching-bag-container">
+          <div class="punching-bag"></div>
+        </div>
+        <div id="countdown-display" class="pop-anim"
+          style="position: absolute; font-size: 180px; font-weight: bold; color: var(--accent-good); text-shadow: 8px 8px 0 #000; font-family: var(--font-arcade); z-index: 10;">
+          3</div>
+      </section>
+
+      <section id="screen-punch" class="screen screen-stack screen-punch-layout">
+        <div id="battle-hud" class="info-row battle-hud-panel" style="display: none; padding: 14px 16px; z-index: 6;">
+          <div style="display: flex; justify-content: space-between; gap: 12px; align-items: center;">
+            <div>
+              <div id="battle-player-label"
+                style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">PLAYER HP</div>
+              <div id="battle-player-hp"
+                style="font-size: 28px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
+            </div>
+            <div style="text-align: center;">
+              <div id="battle-round-label"
+                style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">ROUND</div>
+              <div id="battle-round"
+                style="font-size: 28px; color: var(--accent-good); font-family: var(--font-arcade);">1 / 3</div>
+            </div>
+            <div style="text-align: right;">
+              <div id="battle-hud-robot-label"
+                style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">挑战 HP</div>
+              <div id="battle-robot-hp" style="font-size: 28px; color: var(--accent); font-family: var(--font-arcade);">
+                100</div>
+            </div>
+          </div>
+        </div>
+
+        <div id="punch-motion-ui" class="punch-motion-panel" style="width: 100%;">
+          <div class="punch-callout">
+            <h2 id="punch-instruction" class="pulse-text punch-instruction"
+              style="color: var(--accent); font-size: 36px; text-shadow: 4px 4px 0 #000; margin: 0;">挥动手机，击打沙包！</h2>
+            <p class="punch-subcopy">保持手机正前方，听到提示后快速挥出一拳。</p>
+          </div>
+
+          <div id="punch-stage" class="punching-bag-container punch-stage">
+            <div class="punching-bag" id="bag-punch"></div>
+          </div>
+        </div>
+
+        <div id="punch-fallback-ui" class="punch-fallback-panel" style="display: none; width: 100%;">
+          <div
+            style="background: rgba(255, 140, 0, 0.15); border: 2px dashed var(--accent-warn); padding: 12px; margin-bottom: 16px; border-radius: 8px;">
+            <h2 style="color: var(--accent-alt); font-size: 20px; margin-bottom: 8px;">传感器不可用</h2>
+            <p style="color: #fff; font-size: 14px; margin: 0;">已切换至蓄力模式，请长按下方按钮蓄力，松手出拳</p>
+          </div>
+          <div class="charge-bar" style="height: 36px; border-width: 3px; margin-bottom: 24px;">
+            <div id="fallback-charge-fill" class="charge-fill"></div>
+          </div>
+          <button id="btn-fallback-charge" class="charge-button" style="height: 80px; font-size: 24px;">按住蓄力</button>
+        </div>
+      </section>
+
+      <section id="screen-result" class="screen screen-stack screen-result-layout">
+        <div class="screen-kicker screen-kicker-right">
+          IMPACT FEED
+        </div>
+        <h2 id="result-title" class="result-title-banner"
+          style="font-size: 48px; color: var(--accent-good); margin: 0; text-shadow: 4px 4px 0 #000; z-index: 10; font-family: var(--font-arcade); font-style: italic;">
+          命中！</h2>
+
+        <div class="punching-bag-container bag-hit result-stage">
+          <div class="punching-bag" id="bag-result"></div>
+        </div>
+
+        <div id="damage-hud" class="pop-anim result-damage-hud"
+          style="color: #fff; text-shadow: 4px 4px 0 #000; font-family: var(--font-arcade); z-index: 20; text-align: center;">
+          <div style="font-size: 22px; color: var(--accent-alt);">伤害值</div>
+          <div id="res-damage" style="font-size: 64px; color: var(--accent);">-1240</div>
+        </div>
+
+        <div class="result-rank-panel">
+          <div class="result-rank-badge">
+            <div class="result-rank-label">战绩评级</div>
+            <div id="res-tier" class="result-rank-tier">B</div>
+          </div>
+          <div class="result-meter-card">
+            <div class="result-meter-head">
+              <span class="result-stat-label">气势槽</span>
+              <span id="res-meter-label" class="result-meter-label">50 / 100</span>
+            </div>
+            <div class="result-meter-track">
+              <div id="res-meter-fill" class="result-meter-fill"></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="result-hud result-grid-panel stats-grid result-stats-grid"
+          style="width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+          <div class="info-row result-stat-card">
+            <div class="result-stat-label">出拳指数</div>
+            <div id="res-score" class="result-stat-value result-stat-value-score"
+              style="font-size: 42px; color: var(--accent-good); font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">
+              --</div>
+          </div>
+          <div class="info-row result-stat-card">
+            <div class="result-stat-label">拳击评级</div>
+            <div id="res-rating" class="result-stat-value"
+              style="font-size: 28px; color: #fff; font-family: var(--font-arcade); text-shadow: 3px 3px 0 #000;">HEAVY
+              HIT</div>
+          </div>
+          <div class="info-row result-stat-card">
+            <div class="result-stat-label">本次称号</div>
+            <div id="res-title" class="result-stat-value"
+              style="font-size: 24px; color: var(--accent-alt); font-family: var(--font-arcade);">校园拳王</div>
+          </div>
+          <div class="info-row result-stat-card">
+            <div class="result-stat-label">气势判定</div>
+            <div id="res-copy" class="result-stat-value result-stat-value-copy"
+              style="font-size: 14px; color: #fff; line-height: 1.6;">试探级压迫</div>
+          </div>
+        </div>
+
+        <div class="screen-actions" style="width: 100%; display: grid; gap: 10px;">
+          <button id="btn-result-retry" class="accent-button"
+            style="font-size: 24px; padding: 16px; width: 100%;">再来一次</button>
+          <button id="btn-result-battle" class="primary-button"
+            style="font-size: 18px; padding: 14px; width: 100%;">进入人机对战</button>
+          <button id="btn-result-home" class="secondary-button"
+            style="font-size: 18px; padding: 14px; width: 100%;">返回首页</button>
+        </div>
+      </section>
+
+      <section id="screen-battle-prep" class="screen screen-stack">
+        <h2 style="color: var(--accent-alt); font-size: 34px; margin-bottom: 18px;">模式二：人机对战</h2>
+        <div class="info-row" style="width: 100%; text-align: left; padding: 24px; margin-bottom: 24px;">
+          <p id="battle-prep-copy" style="margin: 0; color: #fff; line-height: 1.9; font-size: 16px;">
+            你将和拳击机器人进行三回合对战。<br>
+            每回合你先出拳，机器人会根据你的力度自动反击。<br>
+            三轮结束后，剩余 HP 更高的一方获胜。
+          </p>
+        </div>
+        <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 20px;">
+          <label for="battle-challenge-input"
+            style="display: block; margin-bottom: 10px; color: var(--accent-good); font-size: 13px; font-family: var(--font-arcade); letter-spacing: 1px;">
+            输入你今天想打倒的挑战
+          </label>
+          <input id="battle-challenge-input" type="text" maxlength="24" placeholder="例如：小组 presentation / 期末答辩 / 周一早八"
+            style="width: 100%; height: 52px; padding: 0 14px; border: 1px solid rgba(23, 241, 255, 0.36); background: rgba(7, 14, 30, 0.9); color: #fff; font-size: 16px; outline: none; box-shadow: inset 0 0 0 1px rgba(255,255,255,0.03), 0 0 18px rgba(23, 241, 255, 0.08);" />
+          <p id="battle-challenge-preview"
+            style="margin: 12px 0 0; color: var(--muted); line-height: 1.7; font-size: 14px;">
+            输入一个现实烦恼，让这场对战更像把焦虑一拳打飞。
+          </p>
+        </div>
+        <div class="stats-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 24px;">
+          <div class="info-row" style="text-align: center;">
+            <div style="font-size: 12px; color: var(--muted);">玩家 HP</div>
+            <div style="font-size: 34px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
+          </div>
+          <div class="info-row" style="text-align: center;">
+            <div id="battle-prep-opponent-label" style="font-size: 12px; color: var(--muted);">挑战对象 HP</div>
+            <div style="font-size: 34px; color: var(--accent); font-family: var(--font-arcade);">100</div>
+          </div>
+        </div>
+        <div style="width: 100%; display: grid; gap: 12px;">
+          <button id="btn-battle-start" class="accent-button" style="font-size: 24px; padding: 16px;">开始战斗</button>
+          <button id="btn-battle-prep-home" class="secondary-button"
+            style="font-size: 18px; padding: 14px;">返回首页</button>
+        </div>
+      </section>
+
+      <section id="screen-battle-status" class="screen screen-stack screen-battle-layout">
+        <h2 id="battle-status-title"
+          style="color: var(--accent-good); font-size: 42px; margin: 0 0 18px; font-family: var(--font-arcade);">Round 1
+          结束</h2>
+        <div id="battle-status-phase"
+          style="font-family: var(--font-arcade); font-size: 18px; color: var(--accent-alt); letter-spacing: 2px; margin-bottom: 14px;">
+          战斗回放中...
+        </div>
+        <div id="battle-arena" class="battle-arena">
+          <div class="arena-backdrop">
+            <div class="arena-cityline"></div>
+            <div class="arena-crowd"></div>
+            <div class="arena-lights"></div>
+            <div class="arena-energy-ring"></div>
+            <div class="arena-scanlines"></div>
+          </div>
+          <div class="arena-floor"></div>
+          <div class="arena-impact-burst"></div>
+          <div class="arena-speedlines arena-speedlines-player"></div>
+          <div class="arena-speedlines arena-speedlines-robot"></div>
+          <div class="fighter-card fighter-player" id="fighter-player">
+            <div class="fighter-label">PLAYER</div>
+            <div class="fighter-avatar">
+              <div class="fighter-trail fighter-trail-player"></div>
+              <img class="fighter-illustration" alt="赛博朋克拳手"
+                src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cinematic%20cyberpunk%20boxing%20hero%2C%20young%20fighter%20launching%20a%20punch%2C%20neon%20teal%20and%20magenta%20exosuit%2C%20dynamic%20foreshortened%20pose%2C%20full%20body%2C%20dramatic%20rim%20light%2C%20high%20energy%2C%20futuristic%20arena%2C%20game%20key%20art%2C%20dark%20background&image_size=portrait_4_3" />
+              <div class="fighter-shadow"></div>
+              <div class="fighter-glow fighter-glow-player"></div>
+              <div class="fighter-platform"></div>
+            </div>
+            <div id="battle-popup-player" class="damage-popup damage-popup-player">-34</div>
+          </div>
+          <div class="arena-divider">
+            <div class="arena-flash"></div>
+            <div class="arena-vs">VS</div>
+          </div>
+          <div class="fighter-card fighter-robot" id="fighter-robot">
+            <div id="fighter-robot-label" class="fighter-label">CHALLENGE</div>
+            <div class="fighter-avatar">
+              <div class="fighter-trail fighter-trail-robot"></div>
+              <img class="fighter-illustration" alt="赛博朋克拳击机器人"
+                src="https://coresg-normal.trae.ai/api/ide/v1/text_to_image?prompt=cinematic%20cyberpunk%20boxing%20robot%20enemy%2C%20heavy%20combat%20android%20throwing%20a%20violent%20counterpunch%2C%20crimson%20neon%20visor%2C%20armored%20fists%2C%20dynamic%20foreshortened%20pose%2C%20full%20body%2C%20futuristic%20arena%2C%20dramatic%20lighting%2C%20high%20energy%2C%20game%20key%20art%2C%20dark%20background&image_size=portrait_4_3" />
+              <div class="challenge-core-wrap" aria-hidden="true">
+                <div id="battle-challenge-core" class="challenge-core">CHALLENGE</div>
+                <div class="challenge-shards">
+                  <span class="challenge-shard challenge-shard-1"></span>
+                  <span class="challenge-shard challenge-shard-2"></span>
+                  <span class="challenge-shard challenge-shard-3"></span>
+                  <span class="challenge-shard challenge-shard-4"></span>
+                  <span class="challenge-shard challenge-shard-5"></span>
+                  <span class="challenge-shard challenge-shard-6"></span>
+                </div>
+              </div>
+              <div class="fighter-shadow"></div>
+              <div class="fighter-glow fighter-glow-robot"></div>
+              <div class="fighter-platform"></div>
+            </div>
+            <div id="battle-popup-robot" class="damage-popup damage-popup-robot">-38</div>
+          </div>
+        </div>
+        <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 18px;">
+          <p id="battle-status-copy" style="margin: 0; color: #fff; line-height: 1.9; font-size: 16px;">
+            你的出拳指数：76。你造成了 38 点伤害，机器人反击造成 34 点伤害。
+          </p>
+        </div>
+        <div class="stats-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 20px;">
+          <div class="info-row" style="text-align: center;">
+            <div id="battle-status-player-label" style="font-size: 12px; color: var(--muted);">你的剩余 HP</div>
+            <div id="battle-status-player-hp"
+              style="font-size: 34px; color: var(--accent-alt); font-family: var(--font-arcade);">66</div>
+          </div>
+          <div class="info-row" style="text-align: center;">
+            <div id="battle-status-robot-label" style="font-size: 12px; color: var(--muted);">挑战剩余 HP</div>
+            <div id="battle-status-robot-hp"
+              style="font-size: 34px; color: var(--accent); font-family: var(--font-arcade);">62</div>
+          </div>
+        </div>
+        <div class="screen-actions" style="width: 100%; display: grid; gap: 12px;">
+          <button id="btn-battle-next" class="accent-button" style="font-size: 24px; padding: 16px;">下一回合</button>
+          <button id="btn-battle-status-home" class="secondary-button"
+            style="font-size: 18px; padding: 14px;">返回首页</button>
+        </div>
+      </section>
+
+      <section id="screen-battle-result" class="screen screen-stack screen-battle-result-layout">
+        <div class="battle-result-hero">
+          <div id="battle-result-kicker" class="battle-result-kicker">FINISHER</div>
+          <div class="battle-result-impact-mark"></div>
+          <h2 id="battle-result-title"
+            style="font-size: 54px; color: var(--accent-good); margin: 0 0 14px; font-family: var(--font-arcade);">Win!
+          </h2>
+          <div id="battle-result-defeated" class="battle-result-defeated">CHALLENGE SHATTERED</div>
+        </div>
+        <p id="battle-result-copy" style="color: #fff; font-size: 16px; line-height: 1.8; margin: 0 0 24px;">
+          你击败了拳击机器人。今日称号：手机拳王
+        </p>
+        <div class="stats-grid"
+          style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px; width: 100%; margin-bottom: 14px;">
+          <div class="info-row" style="text-align: center;">
+            <div id="battle-final-player-label" style="font-size: 12px; color: var(--muted);">玩家剩余 HP</div>
+            <div id="battle-final-player-hp"
+              style="font-size: 32px; color: var(--accent-alt); font-family: var(--font-arcade);">100</div>
+          </div>
+          <div class="info-row" style="text-align: center;">
+            <div id="battle-final-robot-label" style="font-size: 12px; color: var(--muted);">挑战剩余 HP</div>
+            <div id="battle-final-robot-hp"
+              style="font-size: 32px; color: var(--accent); font-family: var(--font-arcade);">0</div>
+          </div>
+          <div class="info-row" style="text-align: center;">
+            <div style="font-size: 12px; color: var(--muted);">三回合总伤害</div>
+            <div id="battle-final-damage"
+              style="font-size: 32px; color: var(--accent-good); font-family: var(--font-arcade);">120</div>
+          </div>
+          <div class="info-row" style="text-align: center;">
+            <div style="font-size: 12px; color: var(--muted);">最高出拳指数</div>
+            <div id="battle-final-score" style="font-size: 32px; color: #fff; font-family: var(--font-arcade);">95</div>
+          </div>
+        </div>
+        <div class="screen-actions" style="width: 100%; display: grid; gap: 12px;">
+          <button id="btn-battle-restart" class="accent-button" style="font-size: 24px; padding: 16px;">再战一次</button>
+          <button id="btn-battle-result-home" class="secondary-button"
+            style="font-size: 18px; padding: 14px;">返回首页</button>
+        </div>
+      </section>
+
+      <section id="screen-pvp" class="screen screen-stack">
+        <div class="screen-kicker screen-kicker-right">PVP LOBBY</div>
+        <h2 style="color: var(--accent-alt); font-size: 34px; margin-bottom: 18px;">模式三：PVP 在线对战</h2>
+
+        <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 14px;">
+          <div style="display: grid; gap: 10px;">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <label style="display: grid; gap: 6px;">
+                <div
+                  style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade); letter-spacing: 1px;">昵称
+                </div>
+                <input id="pvp-name" class="text-input" type="text" value="Player" />
+              </label>
+              <label style="display: grid; gap: 6px;">
+                <div
+                  style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade); letter-spacing: 1px;">
+                  房间码</div>
+                <input id="pvp-room-code" class="text-input" type="text" placeholder="如 ABC123" />
+              </label>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <button id="btn-pvp-create" class="primary-button pvp-action-button"
+                style="font-size: 18px; padding: 14px;">创建房间</button>
+              <button id="btn-pvp-join" class="accent-button pvp-action-button"
+                style="font-size: 18px; padding: 14px;">加入房间</button>
+            </div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px;">
+              <button id="btn-pvp-ready" class="accent-button pvp-action-button" style="font-size: 18px; padding: 14px;"
+                disabled>准备</button>
+              <button id="btn-pvp-leave" class="secondary-button pvp-action-button"
+                style="font-size: 18px; padding: 14px;" disabled>离开房间</button>
+            </div>
+            <div id="pvp-status" style="color: #fff; line-height: 1.8; font-size: 14px; opacity: 0.92;">未连接</div>
+          </div>
+        </div>
+
+        <div class="info-row" style="width: 100%; text-align: left; padding: 20px; margin-bottom: 14px;">
+          <div style="display: grid; gap: 8px;">
+            <div style="display: flex; justify-content: space-between; gap: 12px; align-items: baseline;">
+              <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">ROOM</div>
+              <div id="pvp-room-label"
+                style="font-size: 22px; color: var(--accent-good); font-family: var(--font-arcade); letter-spacing: 2px;">
+                --</div>
+            </div>
+            <div id="pvp-players" style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px;">
+              <div class="info-row" style="padding: 14px;">
+                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">YOU</div>
+                <div id="pvp-player-you" style="font-size: 18px; color: #fff; font-weight: 700;">--</div>
+                <div id="pvp-player-you-ready" style="font-size: 12px; color: var(--muted); margin-top: 6px;">NOT READY
+                </div>
+              </div>
+              <div class="info-row" style="padding: 14px;">
+                <div style="font-size: 12px; color: var(--muted); font-family: var(--font-arcade);">OPPONENT</div>
+                <div id="pvp-player-opp" style="font-size: 18px; color: #fff; font-weight: 700;">--</div>
+                <div id="pvp-player-opp-ready" style="font-size: 12px; color: var(--muted); margin-top: 6px;">WAITING
+                </div>
+              </div>
+            </div>
+            <div class="stats-grid" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px;">
+              <div class="info-row" style="text-align: center; padding: 12px;">
+                <div style="font-size: 12px; color: var(--muted);">回合</div>
+                <div id="pvp-round" style="font-size: 26px; color: var(--accent-alt); font-family: var(--font-arcade);">
+                  -</div>
+              </div>
+              <div class="info-row" style="text-align: center; padding: 12px;">
+                <div style="font-size: 12px; color: var(--muted);">你本回合</div>
+                <div id="pvp-score-you"
+                  style="font-size: 26px; color: var(--accent-good); font-family: var(--font-arcade);">-</div>
+              </div>
+              <div class="info-row" style="text-align: center; padding: 12px;">
+                <div style="font-size: 12px; color: var(--muted);">对手本回合</div>
+                <div id="pvp-score-opp" style="font-size: 26px; color: var(--accent); font-family: var(--font-arcade);">
+                  -</div>
+              </div>
+            </div>
+            <div id="pvp-round-outcome" style="font-size: 14px; color: #fff; line-height: 1.7; opacity: 0.92;">等待开始
+            </div>
+          </div>
+        </div>
+
+        <div style="width: 100%; display: grid; gap: 12px;">
+          <button id="btn-pvp-home" class="secondary-button" style="font-size: 18px; padding: 14px;">返回首页</button>
+        </div>
+      </section>
+
+    </main>
+  </div>
+
+  <script type="module" src="./src/app.js"></script>
+  <script>
+    // UI Animation Patch
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'childList' || mutation.type === 'characterData') {
+          const target = mutation.target.nodeType === 3 ? mutation.target.parentElement : mutation.target;
+
+          if (target.id === 'res-score' && target.textContent !== '--') {
+            target.classList.remove('pop-anim');
+            void target.offsetWidth;
+            target.classList.add('pop-anim');
+
+            const damageHud = document.getElementById('damage-hud');
+            if (damageHud) {
+              damageHud.classList.remove('pop-anim');
+              void damageHud.offsetWidth;
+              damageHud.classList.add('pop-anim');
             }
-            
-            if (target.id === 'countdown-display') {
-              target.classList.remove('pop-anim');
-              void target.offsetWidth;
-              target.classList.add('pop-anim');
+
+            const resultBag = document.getElementById('bag-result');
+            if (resultBag) {
+              const bagContainer = resultBag.parentElement;
+              bagContainer.classList.remove('bag-hit');
+              void bagContainer.offsetWidth;
+              bagContainer.classList.add('bag-hit');
             }
           }
-        });
+
+          if (target.id === 'countdown-display') {
+            target.classList.remove('pop-anim');
+            void target.offsetWidth;
+            target.classList.add('pop-anim');
+          }
+        }
       });
-      observer.observe(document.querySelector('#app-container'), { childList: true, subtree: true, characterData: true });
-    </script>
-  </body>
+    });
+    observer.observe(document.querySelector('#app-container'), { childList: true, subtree: true, characterData: true });
+  </script>
+</body>
+
 </html>

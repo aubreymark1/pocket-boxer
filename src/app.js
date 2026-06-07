@@ -1,9 +1,11 @@
 import { createMotionController } from './motion.js';
 import { feedbackModule } from './feedback.js';
 import { createBattleController } from './battle.js';
+import { createPvpClient } from './pvp.js';
 
 const MODE_TEST = 'test';
 const MODE_BATTLE = 'battle';
+const MODE_PVP = 'pvp';
 const DEFAULT_BATTLE_CHALLENGE = '拳击机器人';
 const BUTTON_PUNCH_POP_MS = 560;
 const BUTTON_PUNCH_TRANSITION_DELAY_MS = 180;
@@ -57,6 +59,22 @@ const btnBattleRestart = document.getElementById('btn-battle-restart');
 const btnBattleResultHome = document.getElementById('btn-battle-result-home');
 const btnPvpHome = document.getElementById('btn-pvp-home');
 const battleChallengeInput = document.getElementById('battle-challenge-input');
+const pvpNameInput = document.getElementById('pvp-name');
+const pvpRoomCodeInput = document.getElementById('pvp-room-code');
+const btnPvpCreate = document.getElementById('btn-pvp-create');
+const btnPvpJoin = document.getElementById('btn-pvp-join');
+const btnPvpReady = document.getElementById('btn-pvp-ready');
+const btnPvpLeave = document.getElementById('btn-pvp-leave');
+const pvpStatus = document.getElementById('pvp-status');
+const pvpRoomLabel = document.getElementById('pvp-room-label');
+const pvpPlayerYou = document.getElementById('pvp-player-you');
+const pvpPlayerYouReady = document.getElementById('pvp-player-you-ready');
+const pvpPlayerOpp = document.getElementById('pvp-player-opp');
+const pvpPlayerOppReady = document.getElementById('pvp-player-opp-ready');
+const pvpRoundLabel = document.getElementById('pvp-round');
+const pvpScoreYou = document.getElementById('pvp-score-you');
+const pvpScoreOpp = document.getElementById('pvp-score-opp');
+const pvpRoundOutcome = document.getElementById('pvp-round-outcome');
 
 const safetyTitle = document.getElementById('safety-title');
 const safetyCopy = document.getElementById('safety-copy');
@@ -83,12 +101,15 @@ const bagResult = document.getElementById('bag-result');
 const punchStage = document.getElementById('punch-stage');
 
 const battleHud = document.getElementById('battle-hud');
+const battlePlayerLabel = document.getElementById('battle-player-label');
+const battleRoundLabel = document.getElementById('battle-round-label');
 const battleRound = document.getElementById('battle-round');
 const battlePlayerHp = document.getElementById('battle-player-hp');
 const battleRobotHp = document.getElementById('battle-robot-hp');
 const battleStatusTitle = document.getElementById('battle-status-title');
 const battleStatusPhase = document.getElementById('battle-status-phase');
 const battleStatusCopy = document.getElementById('battle-status-copy');
+const battleStatusPlayerLabel = document.getElementById('battle-status-player-label');
 const battleStatusPlayerHp = document.getElementById('battle-status-player-hp');
 const battleStatusRobotHp = document.getElementById('battle-status-robot-hp');
 const battleArena = document.getElementById('battle-arena');
@@ -102,6 +123,7 @@ const battleResultKicker = document.getElementById('battle-result-kicker');
 const battleResultTitle = document.getElementById('battle-result-title');
 const battleResultDefeated = document.getElementById('battle-result-defeated');
 const battleResultCopy = document.getElementById('battle-result-copy');
+const battleFinalPlayerLabel = document.getElementById('battle-final-player-label');
 const battleFinalPlayerHp = document.getElementById('battle-final-player-hp');
 const battleFinalRobotHp = document.getElementById('battle-final-robot-hp');
 const battleFinalDamage = document.getElementById('battle-final-damage');
@@ -120,6 +142,34 @@ const appState = {
 };
 
 const battleController = createBattleController();
+
+const pvpRuntime = {
+  status: 'idle',
+  role: '',
+  roomCode: '',
+  currentRound: 0,
+  maxRounds: 3,
+  youScore: null,
+  oppScore: null,
+  winsYou: 0,
+  winsOpp: 0,
+  playerName: '你',
+  opponentName: '对手',
+  history: [],
+  finalResult: null,
+  isStatusAnimating: false,
+  outcome: '未连接',
+  winner: null,
+};
+
+const pvpClient = createPvpClient({
+  onEvent: (event) => {
+    handlePvpEvent(event);
+  },
+  onStatus: (snapshot) => {
+    handlePvpStatus(snapshot);
+  },
+});
 
 const motionController = createMotionController({
   onUpdate(snapshot) {
@@ -194,7 +244,222 @@ function goHome() {
   appState.activePunchContext = MODE_TEST;
   appState.battleAutoAdvanceToken += 1;
   battleHud.style.display = 'none';
+  const pvpSnapshot = pvpClient.getSnapshot();
+  if (pvpSnapshot.roomCode) {
+    pvpClient.leave();
+  }
   showScreen('home');
+}
+
+function openPvp() {
+  motionController.resetResult();
+  pointerActive = false;
+  appState.selectedMode = MODE_PVP;
+  appState.activePunchContext = MODE_PVP;
+  pvpRuntime.currentRound = 0;
+  pvpRuntime.youScore = null;
+  pvpRuntime.oppScore = null;
+  pvpRuntime.winsYou = 0;
+  pvpRuntime.winsOpp = 0;
+  pvpRuntime.playerName = getPvpInputName();
+  pvpRuntime.opponentName = '对手';
+  pvpRuntime.history = [];
+  pvpRuntime.finalResult = null;
+  pvpRuntime.isStatusAnimating = false;
+  pvpRuntime.winner = null;
+  pvpRuntime.outcome = '未连接';
+  updatePvpUi();
+  showScreen('pvp');
+}
+
+function getPvpInputName() {
+  const raw = pvpNameInput?.value ?? '';
+  const normalized = String(raw).trim().slice(0, 18);
+  return normalized || 'Player';
+}
+
+function getPvpInputRoomCode() {
+  const raw = pvpRoomCodeInput?.value ?? '';
+  return String(raw).trim().toUpperCase();
+}
+
+function getDefaultPvpUrl() {
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const host = window.location.host;
+  const hostname = window.location.hostname;
+
+  if (!host || hostname === 'localhost' || hostname === '127.0.0.1') {
+    return 'ws://localhost:8787';
+  }
+
+  return `${protocol}//${host}/ws`;
+}
+
+async function ensurePvpConnected() {
+  const url = getDefaultPvpUrl();
+  const snapshot = pvpClient.getSnapshot();
+  if (snapshot.status === 'connected' && snapshot.url === url) {
+    return true;
+  }
+
+  pvpClient.connect(url);
+  for (let i = 0; i < 35; i += 1) {
+    await new Promise((resolve) => window.setTimeout(resolve, 120));
+    const current = pvpClient.getSnapshot();
+    if (current.status === 'connected') return true;
+    if (current.status === 'disconnected') break;
+  }
+  return false;
+}
+
+function getPvpSides(snapshot = pvpClient.getSnapshot()) {
+  const room = snapshot.room;
+  const youRole = snapshot.role || '';
+  const oppRole = youRole === 'A' ? 'B' : youRole === 'B' ? 'A' : '';
+  const you = youRole && room?.players?.[youRole] ? room.players[youRole] : null;
+  const opp = oppRole && room?.players?.[oppRole] ? room.players[oppRole] : null;
+  return { room, youRole, oppRole, you, opp };
+}
+
+function setPvpOutcome(text) {
+  pvpRuntime.outcome = text;
+  updatePvpUi();
+}
+
+function updatePvpUi() {
+  const snapshot = pvpClient.getSnapshot();
+  const { room, youRole, you, opp } = getPvpSides(snapshot);
+
+  if (pvpStatus) {
+    const statusLabel = snapshot.status === 'connected'
+      ? '已连接'
+      : snapshot.status === 'connecting'
+        ? '连接中...'
+        : snapshot.status === 'disconnected'
+          ? '已断开'
+          : '未连接';
+    const extra = snapshot.lastError ? ` · ${snapshot.lastError}` : '';
+    pvpStatus.textContent = `${statusLabel}${extra}`;
+  }
+
+  if (pvpRoomLabel) pvpRoomLabel.textContent = snapshot.roomCode || '--';
+  if (pvpPlayerYou) pvpPlayerYou.textContent = you ? `${you.name} (${youRole || 'YOU'})` : '--';
+  if (pvpPlayerOpp) pvpPlayerOpp.textContent = opp ? opp.name : '--';
+  if (pvpPlayerYouReady) pvpPlayerYouReady.textContent = you ? (you.ready ? 'READY' : 'NOT READY') : '--';
+  if (pvpPlayerOppReady) pvpPlayerOppReady.textContent = !opp ? 'WAITING' : (opp.ready ? 'READY' : 'NOT READY');
+  if (pvpRoundLabel) pvpRoundLabel.textContent = pvpRuntime.currentRound ? `${pvpRuntime.currentRound} / ${pvpRuntime.maxRounds}` : '-';
+  if (pvpScoreYou) pvpScoreYou.textContent = pvpRuntime.youScore == null ? '-' : String(pvpRuntime.youScore);
+  if (pvpScoreOpp) pvpScoreOpp.textContent = pvpRuntime.oppScore == null ? '-' : String(pvpRuntime.oppScore);
+  if (pvpRoundOutcome) pvpRoundOutcome.textContent = pvpRuntime.outcome || '';
+
+  const inRoom = Boolean(snapshot.roomCode);
+  const roomOpen = room?.status === 'lobby';
+  const youReady = Boolean(you?.ready);
+  if (btnPvpCreate) btnPvpCreate.disabled = inRoom;
+  if (btnPvpJoin) btnPvpJoin.disabled = inRoom;
+  if (btnPvpReady) btnPvpReady.disabled = snapshot.status !== 'connected' || !inRoom || !roomOpen || youReady;
+  if (btnPvpLeave) btnPvpLeave.disabled = snapshot.status !== 'connected' || !inRoom;
+}
+
+function handlePvpStatus(snapshot) {
+  pvpRuntime.status = snapshot.status;
+  pvpRuntime.role = snapshot.role;
+  pvpRuntime.roomCode = snapshot.roomCode;
+  const { you, opp } = getPvpSides(snapshot);
+  if (you?.name) pvpRuntime.playerName = you.name;
+  if (opp?.name) pvpRuntime.opponentName = opp.name;
+  if (snapshot.room?.maxRounds) pvpRuntime.maxRounds = snapshot.room.maxRounds;
+  if (snapshot.room?.round) pvpRuntime.currentRound = snapshot.room.round;
+  if (snapshot.lastError) pvpRuntime.outcome = snapshot.lastError;
+  updatePvpUi();
+}
+
+function handlePvpEvent(event) {
+  if (!event) return;
+  const type = event.type;
+  const data = event.data || {};
+
+  if (type === 'startRound') {
+    const round = Number.parseInt(data.round, 10);
+    pvpRuntime.currentRound = Number.isFinite(round) ? round : pvpRuntime.currentRound;
+    pvpRuntime.youScore = null;
+    pvpRuntime.oppScore = null;
+    pvpRuntime.winner = null;
+    setPvpOutcome(`Round ${pvpRuntime.currentRound} 开始，准备出拳`);
+    void startCountdown(MODE_PVP);
+    return;
+  }
+
+  if (type === 'punchAck') {
+    setPvpOutcome('已提交出拳，等待对手...');
+    punchInstruction.textContent = `已出拳，等待 ${pvpRuntime.opponentName} 回击...`;
+    return;
+  }
+
+  if (type === 'roundResult') {
+    const snapshot = pvpClient.getSnapshot();
+    const role = snapshot.role;
+    const youScore = role === 'A' ? data?.A?.score : data?.B?.score;
+    const oppScore = role === 'A' ? data?.B?.score : data?.A?.score;
+    pvpRuntime.youScore = youScore ?? null;
+    pvpRuntime.oppScore = oppScore ?? null;
+    pvpRuntime.winner = data?.winner || null;
+    if (data?.winner === role) pvpRuntime.winsYou += 1;
+    else if (data?.winner && data.winner !== 'draw') pvpRuntime.winsOpp += 1;
+
+    const roundSummary = {
+      round: Number.parseInt(data.round, 10) || pvpRuntime.currentRound,
+      youScore: pvpRuntime.youScore ?? 0,
+      oppScore: pvpRuntime.oppScore ?? 0,
+      winner: data?.winner || 'draw',
+    };
+    pvpRuntime.history.push(roundSummary);
+    if (data?.winner === 'draw') {
+      setPvpOutcome(`Round ${roundSummary.round} 平局 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    } else if (data?.winner === role) {
+      setPvpOutcome(`Round ${roundSummary.round} 你赢了 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    } else {
+      setPvpOutcome(`Round ${roundSummary.round} 你输了 · ${roundSummary.youScore} : ${roundSummary.oppScore}`);
+    }
+    void showPvpBattleStatus(roundSummary, roundSummary.round >= pvpRuntime.maxRounds);
+    return;
+  }
+
+  if (type === 'matchResult') {
+    const snapshot = pvpClient.getSnapshot();
+    const role = snapshot.role;
+    const winner = data?.winner || 'draw';
+    pvpRuntime.finalResult = data;
+    pvpRuntime.winner = winner;
+    if (winner === 'draw') setPvpOutcome('比赛结束：平局');
+    else if (winner === role) setPvpOutcome('比赛结束：你获胜');
+    else setPvpOutcome('比赛结束：你落败');
+    if (!pvpRuntime.isStatusAnimating) {
+      showPvpBattleResult();
+    }
+    return;
+  }
+
+  if (type === 'opponentLeft') {
+    setPvpOutcome('对手已离开房间');
+    showScreen('pvp');
+  }
+}
+
+async function pvpPrepareAndReady() {
+  try {
+    const snapshot = await motionController.requestPermission();
+    if (snapshot.permissionStatus === 'granted') {
+      showScreen('calibrating');
+      await motionController.startCalibration();
+    }
+    showScreen('pvp');
+    pvpClient.ready();
+    setPvpOutcome('已准备，等待对手...');
+  } catch (err) {
+    console.error(err);
+    alert(`发生错误: ${err.message || String(err)}`);
+  }
 }
 
 function normalizeScore(rawScore) {
@@ -422,10 +687,22 @@ function buildPunchResult(rawResult) {
 function updateBattleHud() {
   const snapshot = battleController.getSnapshot();
   battleHud.style.display = appState.activePunchContext === MODE_BATTLE ? 'block' : 'none';
+  if (battlePlayerLabel) battlePlayerLabel.textContent = 'PLAYER HP';
+  if (battleRoundLabel) battleRoundLabel.textContent = 'ROUND';
   battleRound.textContent = `${snapshot.currentRound} / ${snapshot.maxRounds}`;
   battlePlayerHp.textContent = String(snapshot.playerHp);
   battleRobotHp.textContent = String(snapshot.robotHp);
   refreshBattleChallengeUi();
+}
+
+function updatePvpBattleHud() {
+  battleHud.style.display = 'block';
+  if (battlePlayerLabel) battlePlayerLabel.textContent = '你的胜场';
+  if (battleRoundLabel) battleRoundLabel.textContent = 'PVP ROUND';
+  if (battleHudRobotLabel) battleHudRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
+  battleRound.textContent = `${pvpRuntime.currentRound} / ${pvpRuntime.maxRounds}`;
+  battlePlayerHp.textContent = String(pvpRuntime.winsYou);
+  battleRobotHp.textContent = String(pvpRuntime.winsOpp);
 }
 
 function configureSafetyScreen() {
@@ -489,7 +766,9 @@ async function startCountdown(context) {
   setCountdownDisplay('3');
   countdownContext.textContent = context === MODE_BATTLE
     ? `模式二 · Round ${battleController.getSnapshot().currentRound}`
-    : '模式一：出拳测试';
+    : context === MODE_PVP
+      ? `模式三 · Round ${pvpRuntime.currentRound || 1}`
+      : '模式一：出拳测试';
 
   for (let i = 3; i > 0; i -= 1) {
     setCountdownDisplay(String(i));
@@ -525,6 +804,9 @@ async function startPunch(context) {
     const narrative = getBattleNarrative();
     punchInstruction.textContent = narrative.punchInstruction;
     updateBattleHud();
+  } else if (context === MODE_PVP) {
+    punchInstruction.textContent = `PVP Round ${pvpRuntime.currentRound || 1} · 对战 ${pvpRuntime.opponentName}`;
+    updatePvpBattleHud();
   } else {
     punchInstruction.textContent = '挥动手机，击打沙包！';
     battleHud.style.display = 'none';
@@ -664,6 +946,8 @@ async function showBattleStatus(snapshot) {
   const { roundSummary, battleFinished } = snapshot;
   const autoAdvanceToken = ++appState.battleAutoAdvanceToken;
   const narrative = getBattleNarrative();
+  if (battleStatusPlayerLabel) battleStatusPlayerLabel.textContent = '你的剩余 HP';
+  if (battleStatusRobotLabel) battleStatusRobotLabel.textContent = narrative.resultRobotLabel;
   battleStatusTitle.textContent = `Round ${roundSummary.round} 结束`;
   battleStatusCopy.textContent = battleFinished && snapshot.winner === 'win'
     ? `你的出拳指数：${roundSummary.score}。你对「${narrative.displayName}」造成了 ${roundSummary.playerDamage} 点终结伤害，这一拳直接把它的防线打到粉碎。`
@@ -740,6 +1024,8 @@ function showBattleResult(snapshot) {
   if (battleResultKicker) {
     battleResultKicker.textContent = winnerCopy.kicker;
   }
+  if (battleFinalPlayerLabel) battleFinalPlayerLabel.textContent = '玩家剩余 HP';
+  if (battleFinalRobotLabel) battleFinalRobotLabel.textContent = narrative.resultRobotLabel;
   battleResultTitle.textContent = winnerCopy.title;
   if (battleResultDefeated) {
     battleResultDefeated.textContent = winnerCopy.defeatedLabel;
@@ -764,6 +1050,121 @@ function winnerMessageForAutoResult(snapshot, displayName) {
   return `你和「${displayName}」势均力敌，战斗结果正在展开...`;
 }
 
+function getPvpWinnerText(winner) {
+  if (winner === 'draw') return '这一回合平分秋色';
+  if (winner === pvpRuntime.role) return `你在 Round ${pvpRuntime.currentRound} 压住了 ${pvpRuntime.opponentName}`;
+  return `${pvpRuntime.opponentName} 在这一回合占了上风`;
+}
+
+async function playPvpStatusAnimation(roundSummary) {
+  resetBattlePlaybackUi();
+  battlePopupRobot.textContent = `${roundSummary.youScore}`;
+  battlePopupPlayer.textContent = `${roundSummary.oppScore}`;
+
+  battleStatusPhase.textContent = `你先出拳，压制 ${pvpRuntime.opponentName}`;
+  battleArena.classList.add('is-player-strike');
+  fighterPlayer.classList.add('is-attacking');
+  await wait(180);
+  battleArena.classList.add('is-impact');
+  fighterRobot.classList.add('is-hit');
+  battlePopupRobot.classList.add('is-active');
+  feedbackModule.hit(roundSummary.youScore);
+  await wait(560);
+
+  resetBattlePlaybackUi();
+  battleStatusPhase.textContent = `${pvpRuntime.opponentName} 发起反击`;
+  battleArena.classList.add('is-robot-strike');
+  fighterRobot.classList.add('is-countering');
+  await wait(180);
+  battleArena.classList.add('is-impact');
+  fighterPlayer.classList.add('is-hit');
+  battlePopupPlayer.classList.add('is-active');
+  if (roundSummary.winner === pvpRuntime.role) feedbackModule.victory();
+  else if (roundSummary.winner === 'draw') feedbackModule.softPulse();
+  else feedbackModule.defeat();
+  await wait(620);
+
+  resetBattlePlaybackUi();
+  battleStatusPhase.textContent = getPvpWinnerText(roundSummary.winner);
+}
+
+async function showPvpBattleStatus(roundSummary, battleFinished) {
+  const autoAdvanceToken = ++appState.battleAutoAdvanceToken;
+  pvpRuntime.isStatusAnimating = true;
+  if (fighterRobotLabel) fighterRobotLabel.textContent = pvpRuntime.opponentName;
+  if (battleStatusPlayerLabel) battleStatusPlayerLabel.textContent = '你的胜场';
+  if (battleStatusRobotLabel) battleStatusRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
+  battleStatusTitle.textContent = `PVP Round ${roundSummary.round} 结束`;
+  battleStatusCopy.textContent = `你的出拳指数 ${roundSummary.youScore}，${pvpRuntime.opponentName} 的出拳指数 ${roundSummary.oppScore}。当前大比分 ${pvpRuntime.winsYou} : ${pvpRuntime.winsOpp}。`;
+  battleStatusPlayerHp.textContent = String(pvpRuntime.winsYou);
+  battleStatusRobotHp.textContent = String(pvpRuntime.winsOpp);
+  btnBattleNext.textContent = '查看最终结果';
+  btnBattleNext.disabled = true;
+  btnBattleNext.style.display = battleFinished ? 'block' : 'none';
+  showScreen('battleStatus');
+  await playPvpStatusAnimation(roundSummary);
+
+  if (autoAdvanceToken !== appState.battleAutoAdvanceToken) {
+    pvpRuntime.isStatusAnimating = false;
+    return;
+  }
+
+  if (!battleFinished) {
+    battleStatusPhase.textContent = `等待 ${pvpRuntime.opponentName} 的下一回合同步...`;
+    pvpRuntime.isStatusAnimating = false;
+    return;
+  }
+
+  battleStatusPhase.textContent = `${pvpRuntime.opponentName} 挑战结束，准备查看总结果`;
+  btnBattleNext.disabled = false;
+  pvpRuntime.isStatusAnimating = false;
+  if (pvpRuntime.finalResult) {
+    showPvpBattleResult();
+  }
+}
+
+function showPvpBattleResult() {
+  const finalResult = pvpRuntime.finalResult;
+  if (!finalResult) return;
+
+  if (battleResultScreen) {
+    battleResultScreen.classList.remove('is-revealing', 'is-win', 'is-lose', 'is-draw');
+    void battleResultScreen.offsetWidth;
+    const stateClass = finalResult.winner === 'draw' ? 'draw' : (finalResult.winner === pvpRuntime.role ? 'win' : 'lose');
+    battleResultScreen.classList.add('is-revealing', `is-${stateClass}`);
+  }
+
+  if (battleResultKicker) {
+    battleResultKicker.textContent = 'PVP SHOWDOWN';
+  }
+  if (battleResultDefeated) {
+    battleResultDefeated.textContent = `${pvpRuntime.playerName} VS ${pvpRuntime.opponentName}`;
+  }
+  if (battleFinalPlayerLabel) battleFinalPlayerLabel.textContent = '你的胜场';
+  if (battleFinalRobotLabel) battleFinalRobotLabel.textContent = `${pvpRuntime.opponentName} 胜场`;
+
+  const winner = finalResult.winner;
+  if (winner === 'draw') {
+    battleResultTitle.textContent = 'Draw!';
+    battleResultCopy.textContent = `你和 ${pvpRuntime.opponentName} 三回合打成平手，下一次再狠狠干出胜负。`;
+    feedbackModule.softPulse();
+  } else if (winner === pvpRuntime.role) {
+    battleResultTitle.textContent = 'Win!';
+    battleResultCopy.textContent = `你在三回合里击败了 ${pvpRuntime.opponentName}，这场 PVP 对决已经被你拿下。`;
+    feedbackModule.victory();
+  } else {
+    battleResultTitle.textContent = 'Lose!';
+    battleResultCopy.textContent = `${pvpRuntime.opponentName} 暂时赢下了这场 PVP，对方的节奏更稳，但你已经把对局打热了。`;
+    feedbackModule.defeat();
+  }
+
+  battleFinalPlayerHp.textContent = String(pvpRuntime.winsYou);
+  battleFinalRobotHp.textContent = String(pvpRuntime.winsOpp);
+  battleFinalDamage.textContent = String(pvpRuntime.history.reduce((sum, item) => sum + item.youScore, 0));
+  battleFinalScore.textContent = String(Math.max(0, ...pvpRuntime.history.map((item) => item.youScore)));
+  showScreen('battleResult');
+}
+
 async function handleBattlePunch(rawResult) {
   const result = buildPunchResult(rawResult);
   const snapshot = battleController.resolveRound(result);
@@ -773,9 +1174,36 @@ async function handleBattlePunch(rawResult) {
   await showBattleStatus(snapshot);
 }
 
+function handlePvpPunch(rawResult) {
+  const snapshot = pvpClient.getSnapshot();
+  if (!snapshot.roomCode || !pvpRuntime.currentRound) {
+    setPvpOutcome('回合尚未开始或未加入房间');
+    showScreen('pvp');
+    return;
+  }
+
+  const result = buildPunchResult(rawResult);
+  pvpRuntime.youScore = result.score;
+  feedbackModule.scorePulse(result.score);
+  animateImpact(result.score);
+  pvpClient.sendPunch({
+    round: pvpRuntime.currentRound,
+    score: result.score,
+    peakDelta: rawResult?.peakDelta ?? null,
+    source: rawResult?.source ?? '',
+  });
+  setPvpOutcome(`已出拳：${result.score}，等待对手...`);
+  punchInstruction.textContent = `已出拳 ${result.score} · 等待 ${pvpRuntime.opponentName} 回击`;
+}
+
 function handlePunchResult(rawResult) {
   motionController.resetResult();
   pointerActive = false;
+
+  if (appState.activePunchContext === MODE_PVP) {
+    handlePvpPunch(rawResult);
+    return;
+  }
 
   if (appState.activePunchContext === MODE_BATTLE) {
     void handleBattlePunch(rawResult);
@@ -833,8 +1261,62 @@ btnModeTest.addEventListener('click', () => {
 btnModeBattle.addEventListener('click', () => {
   runAfterButtonPunchPop(btnModeBattle, openBattlePrep);
 });
-btnModePvp.addEventListener('click', () => showScreen('pvp'));
+btnModePvp.addEventListener('click', () => {
+  runAfterButtonPunchPop(btnModePvp, openPvp);
+});
 btnPvpHome.addEventListener('click', goHome);
+
+if (btnPvpCreate) {
+  btnPvpCreate.addEventListener('click', async () => {
+    const ok = await ensurePvpConnected();
+    if (!ok) {
+      setPvpOutcome('无法连接服务器');
+      return;
+    }
+    pvpClient.createRoom(getPvpInputName());
+    setPvpOutcome('已创建房间，等待对手加入...');
+  });
+}
+
+if (btnPvpJoin) {
+  btnPvpJoin.addEventListener('click', async () => {
+    const ok = await ensurePvpConnected();
+    if (!ok) {
+      setPvpOutcome('无法连接服务器');
+      return;
+    }
+    const roomCode = getPvpInputRoomCode();
+    if (!roomCode) {
+      setPvpOutcome('请输入房间码');
+      return;
+    }
+    pvpClient.joinRoom(roomCode, getPvpInputName());
+    setPvpOutcome('正在加入房间...');
+  });
+}
+
+if (btnPvpReady) {
+  btnPvpReady.addEventListener('click', () => {
+    void pvpPrepareAndReady();
+  });
+}
+
+if (btnPvpLeave) {
+  btnPvpLeave.addEventListener('click', () => {
+    pvpClient.leave();
+    pvpRuntime.currentRound = 0;
+    pvpRuntime.youScore = null;
+    pvpRuntime.oppScore = null;
+    pvpRuntime.winsYou = 0;
+    pvpRuntime.winsOpp = 0;
+    pvpRuntime.history = [];
+    pvpRuntime.finalResult = null;
+    pvpRuntime.opponentName = '对手';
+    pvpRuntime.winner = null;
+    setPvpOutcome('已离开房间');
+    updatePvpUi();
+  });
+}
 
 btnSafetyOk.addEventListener('click', proceedFromSafety);
 btnSafetyHome.addEventListener('click', goHome);
@@ -846,13 +1328,25 @@ btnResultHome.addEventListener('click', goHome);
 btnBattleStart.addEventListener('click', startBattleFlow);
 btnBattlePrepHome.addEventListener('click', goHome);
 btnBattleNext.addEventListener('click', () => {
+  if (appState.selectedMode === MODE_PVP) {
+    if (pvpRuntime.finalResult) {
+      showPvpBattleResult();
+    }
+    return;
+  }
   const snapshot = battleController.getSnapshot();
   if (snapshot.status !== 'finished') {
     proceedBattleRound();
   }
 });
 btnBattleStatusHome.addEventListener('click', goHome);
-btnBattleRestart.addEventListener('click', startBattleFlow);
+btnBattleRestart.addEventListener('click', () => {
+  if (appState.selectedMode === MODE_PVP) {
+    openPvp();
+    return;
+  }
+  startBattleFlow();
+});
 btnBattleResultHome.addEventListener('click', goHome);
 
 if (battleChallengeInput) {
@@ -893,4 +1387,5 @@ if (fallbackBtn) {
 
 window.addEventListener('pointerup', endCharge);
 refreshBattleChallengeUi();
+updatePvpUi();
 showScreen('home');

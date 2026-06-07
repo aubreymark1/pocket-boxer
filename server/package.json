@@ -1,0 +1,16 @@
+{
+  "name": "pocket-boxer-pvp-server",
+  "private": true,
+  "type": "module",
+  "version": "0.1.0",
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "ws": "^8.18.3"
+  },
+  "scripts": {
+    "start": "node server.js"
+  }
+}
+

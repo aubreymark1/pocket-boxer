@@ -1,4 +1,4 @@
-﻿node_modules/
+node_modules/
 dist/
 build/
 .vscode/
@@ -6,3 +6,5 @@ build/
 Thumbs.db
 *.log
 .preview/
+*.pem
+SERVER_GUIDE.md
